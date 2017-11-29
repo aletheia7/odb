@@ -141,7 +141,7 @@ const Input = Param(C.ODB_PARAM_INPUT)
 
 type Con struct {
 	driver           Driver
-	h                handle
+	h                C.odbHANDLE
 	qrys             map[*Query]bool
 	convert_all      bool
 	row_cache_size   uint
@@ -171,7 +171,7 @@ func New(host string, login login, dsn string, opt ...option) (*Con, error) {
 	default:
 		return nil, fmt.Errorf("unknown driver", dsn)
 	}
-	r.h = handle(C.odbAllocate(nil))
+	r.h = C.odbAllocate(nil)
 	if r.h == nil {
 		return nil, errors.New("allocate failed")
 	}
@@ -179,7 +179,7 @@ func New(host string, login login, dsn string, opt ...option) (*Con, error) {
 	defer h.free()
 	p := new_s(dsn)
 	defer p.free()
-	if !B2b(C.odbLogin(r.h, h.p, C.odbUSHORT(tcp.Port), C.odbUSHORT(login), p.p)) {
+	if !b2b(C.odbLogin(r.h, h.p, C.odbUSHORT(tcp.Port), C.odbUSHORT(login), p.p)) {
 		err = oe2err(r.h)
 		C.odbFree(r.h)
 		return nil, err
@@ -199,7 +199,7 @@ type option func(o *Con) (option, error)
 func Load_data_types() option {
 	return func(o *Con) (option, error) {
 		if o.h != nil {
-			if !B2b(C.odbLoadDataTypes(o.h)) {
+			if !b2b(C.odbLoadDataTypes(o.h)) {
 				return nil, oe2err(o.h)
 			}
 		}
@@ -211,7 +211,7 @@ func Unicode(enable bool) option {
 	return func(o *Con) (option, error) {
 		var long C.odbULONG
 		var err error
-		if !B2b(C.odbGetAttrLong(o.h, C.odbLONG(C.ODB_ATTR_UNICODESQL), &long)) {
+		if !b2b(C.odbGetAttrLong(o.h, C.odbLONG(C.ODB_ATTR_UNICODESQL), &long)) {
 			return nil, oe2err(o.h)
 		}
 		var prev bool
@@ -223,7 +223,7 @@ func Unicode(enable bool) option {
 		} else {
 			long = 0
 		}
-		if !B2b(C.odbSetAttrLong(o.h, C.odbLONG(C.ODB_ATTR_UNICODESQL), long)) {
+		if !b2b(C.odbSetAttrLong(o.h, C.odbLONG(C.ODB_ATTR_UNICODESQL), long)) {
 			return nil, oe2err(o.h)
 		}
 		return Unicode(prev), err
@@ -234,7 +234,7 @@ func Cache_procs(enable bool) option {
 	return func(o *Con) (option, error) {
 		var long C.odbULONG
 		var err error
-		if !B2b(C.odbGetAttrLong(o.h, C.odbLONG(C.ODB_ATTR_CACHEPROCS), &long)) {
+		if !b2b(C.odbGetAttrLong(o.h, C.odbLONG(C.ODB_ATTR_CACHEPROCS), &long)) {
 			return nil, oe2err(o.h)
 		}
 		var prev bool
@@ -246,7 +246,7 @@ func Cache_procs(enable bool) option {
 		} else {
 			long = 0
 		}
-		if !B2b(C.odbSetAttrLong(o.h, C.odbLONG(C.ODB_ATTR_CACHEPROCS), long)) {
+		if !b2b(C.odbSetAttrLong(o.h, C.odbLONG(C.ODB_ATTR_CACHEPROCS), long)) {
 			return nil, oe2err(o.h)
 		}
 		return Cache_procs(prev), err
@@ -256,10 +256,10 @@ func Cache_procs(enable bool) option {
 func Querytimeout(timeout uint) option {
 	return func(o *Con) (option, error) {
 		var prev C.odbULONG
-		if !B2b(C.odbGetAttrLong(o.h, C.odbLONG(C.ODB_ATTR_QUERYTIMEOUT), &prev)) {
+		if !b2b(C.odbGetAttrLong(o.h, C.odbLONG(C.ODB_ATTR_QUERYTIMEOUT), &prev)) {
 			return nil, oe2err(o.h)
 		}
-		if !B2b(C.odbSetAttrLong(o.h, C.odbLONG(C.ODB_ATTR_QUERYTIMEOUT), C.odbULONG(timeout))) {
+		if !b2b(C.odbSetAttrLong(o.h, C.odbLONG(C.ODB_ATTR_QUERYTIMEOUT), C.odbULONG(timeout))) {
 			return nil, oe2err(o.h)
 		}
 		return Querytimeout(uint(prev)), nil
@@ -268,10 +268,10 @@ func Querytimeout(timeout uint) option {
 
 func Row_cache(enable bool, size uint) option {
 	return func(o *Con) (option, error) {
-		prev := B2b(C.odbIsUsingRowCache(o.h))
+		prev := b2b(C.odbIsUsingRowCache(o.h))
 		prev_size := o.row_cache_size
 		o.row_cache_size = size
-		if !B2b(C.odbUseRowCache(o.h, b2B(enable), C.odbULONG(o.row_cache_size))) {
+		if !b2b(C.odbUseRowCache(o.h, b2B(enable), C.odbULONG(o.row_cache_size))) {
 			return nil, oe2err(o.h)
 		}
 		return Row_cache(prev, prev_size), nil
@@ -282,7 +282,7 @@ func Convert_all(enable bool) option {
 	return func(o *Con) (option, error) {
 		prev := o.convert_all
 		o.convert_all = enable
-		if !B2b(C.odbConvertAll(o.h, b2B(enable))) {
+		if !b2b(C.odbConvertAll(o.h, b2B(enable))) {
 			return nil, oe2err(o.h)
 		}
 		return Convert_all(prev), nil
@@ -314,7 +314,7 @@ func (o *Con) Allocate_query() *Query {
 	defer lock.Unlock()
 	r := &Query{
 		con: o,
-		h:   handle(C.odbAllocate(o.h)),
+		h:   C.odbAllocate(o.h),
 	}
 	if r.h == nil {
 		r = nil
@@ -346,15 +346,9 @@ func (o *Con) Version() string {
 	}
 }
 
-func (o *Con) remove(qry *Query) {
-	if _, ok := o.qrys[qry]; ok {
-		delete(o.qrys, qry)
-	}
-}
-
 type Query struct {
 	con *Con
-	h   handle
+	h   C.odbHANDLE
 }
 
 // defaults: odb.Cursor_forward, Concur_default, false
@@ -362,7 +356,7 @@ type Query struct {
 func (o *Query) Set_cursor(cursor Cursor, concur Concur, enable_bookmarks bool) (err error) {
 	lock.Lock()
 	defer lock.Unlock()
-	if !B2b(C.odbSetCursor(o.h, C.odbUSHORT(cursor), C.odbUSHORT(concur), b2B(enable_bookmarks))) {
+	if !b2b(C.odbSetCursor(o.h, C.odbUSHORT(cursor), C.odbUSHORT(concur), b2B(enable_bookmarks))) {
 		err = oe2err(o.h)
 	}
 	return
@@ -560,7 +554,7 @@ func (o *Query) Get_total_rows() int {
 func (o *Query) Detach() (err error) {
 	lock.Lock()
 	defer lock.Unlock()
-	if !B2b(C.odbDetachQry(o.h)) {
+	if !b2b(C.odbDetachQry(o.h)) {
 		err = oe2err(o.h)
 	}
 	return
@@ -579,9 +573,9 @@ func (o *Query) Execute(sql string) error {
 	if 0 < len(sql) {
 		s := new_s(sql)
 		defer s.free()
-		r = B2b(C.odbExecute(o.h, s.p))
+		r = b2b(C.odbExecute(o.h, s.p))
 	} else {
-		r = B2b(C.odbExecute(o.h, C.odbPCSTR(nil)))
+		r = b2b(C.odbExecute(o.h, C.odbPCSTR(nil)))
 	}
 	if r {
 		return nil
@@ -592,14 +586,14 @@ func (o *Query) Execute(sql string) error {
 func (o *Query) Fetch_row() error {
 	lock.Lock()
 	defer lock.Unlock()
-	if B2b(C.odbFetchRow(o.h)) {
+	if b2b(C.odbFetchRow(o.h)) {
 		return nil
 	}
 	return oe2err(o.h)
 }
 
 func (o *Query) Fetch_row_abs(row int) (err error) {
-	if !B2b(C.odbFetchRowEx(o.h, C.ODB_FETCH_ABS, C.odbLONG(row))) {
+	if !b2b(C.odbFetchRowEx(o.h, C.ODB_FETCH_ABS, C.odbLONG(row))) {
 		err = oe2err(o.h)
 	}
 	return
@@ -727,7 +721,7 @@ func (o *Query) Col_is_null(col interface{}) bool {
 func (o *Query) No_data() bool {
 	lock.Lock()
 	defer lock.Unlock()
-	return B2b(C.odbNoData(o.h))
+	return b2b(C.odbNoData(o.h))
 }
 
 func (o *Query) Get_total_columns() int {
@@ -778,16 +772,9 @@ func Memo2s(m map[string]string) string {
 	return strings.Join(a, "\r")
 }
 
-type handle C.odbHANDLE
-
-type dcmd uint8
+// type handle C.odbHANDLE
 
 var efalse = errors.New("false")
-
-func Is_amd64() int {
-	return int(C.get_size())
-	// return C.sizeof_odbLONG
-}
 
 func (o *Query) get_param(q *Query, param interface{}) C.odbUSHORT {
 	switch t := param.(type) {
@@ -807,7 +794,7 @@ func (o *Con) prepare_all(sql string, proc bool) (q *Query, err error) {
 	defer lock.Unlock()
 	q = &Query{
 		con: o,
-		h:   handle(C.odbAllocate(o.h)),
+		h:   C.odbAllocate(o.h),
 	}
 	if q.h == nil {
 		q = nil
@@ -815,13 +802,13 @@ func (o *Con) prepare_all(sql string, proc bool) (q *Query, err error) {
 		s := new_s(sql)
 		defer s.free()
 		if proc {
-			if !B2b(C.odbPrepareProc(q.h, s.p)) {
+			if !b2b(C.odbPrepareProc(q.h, s.p)) {
 				err = oe2err(q.h)
 				C.odbFree(q.h)
 				q = nil
 			}
 		} else {
-			if !B2b(C.odbPrepare(q.h, s.p)) {
+			if !b2b(C.odbPrepare(q.h, s.p)) {
 				err = oe2err(q.h)
 				C.odbFree(q.h)
 				q = nil
@@ -844,12 +831,12 @@ func (o *Query) input(param interface{}, dt Data, sql_type string, final bool) (
 	} else {
 		st := new_s(sql_type)
 		defer st.free()
-		if !B2b(C.odbDescribeSqlType(o.con.h, st.p, &st_num, &col_size, &dec_dig)) {
+		if !b2b(C.odbDescribeSqlType(o.con.h, st.p, &st_num, &col_size, &dec_dig)) {
 			err = oe2err(o.h)
 			return
 		}
 	}
-	if !B2b(C.odbBindParamEx(o.h, o.get_param(o, param), Input.ushort(), C.odbSHORT(dt), 0, st_num, col_size, dec_dig, b2B(final))) {
+	if !b2b(C.odbBindParamEx(o.h, o.get_param(o, param), Input.ushort(), C.odbSHORT(dt), 0, st_num, col_size, dec_dig, b2B(final))) {
 		err = oe2err(o.h)
 	}
 	return
@@ -859,7 +846,7 @@ func (o *Query) set_param(param interface{}, v string, final bool) (err error) {
 	s := new_s(v)
 	defer s.free()
 	l := len(v)
-	if !B2b(C.odbSetParam(o.h, o.get_param(o, param), (C.odbPVOID)(s.p), C.odbLONG(l), b2B(final))) {
+	if !b2b(C.odbSetParam(o.h, o.get_param(o, param), (C.odbPVOID)(s.p), C.odbLONG(l), b2B(final))) {
 		err = oe2err(o.h)
 	}
 	return
@@ -868,35 +855,35 @@ func (o *Query) set_param(param interface{}, v string, final bool) (err error) {
 func (o *Query) set_param_text(param interface{}, v string, final bool) (err error) {
 	s := new_s(v)
 	defer s.free()
-	if !B2b(C.odbSetParamText(o.h, o.get_param(o, param), s.p, b2B(final))) {
+	if !b2b(C.odbSetParamText(o.h, o.get_param(o, param), s.p, b2B(final))) {
 		err = oe2err(o.h)
 	}
 	return
 }
 
 func (o *Query) set_param_long(param interface{}, v int, final bool) (err error) {
-	if !B2b(C.odbSetParamLong(o.h, o.get_param(o, param), C.odbULONG(v), b2B(final))) {
+	if !b2b(C.odbSetParamLong(o.h, o.get_param(o, param), C.odbULONG(v), b2B(final))) {
 		err = oe2err(o.h)
 	}
 	return
 }
 
 func (o *Query) set_param_short(param interface{}, v int16, final bool) (err error) {
-	if !B2b(C.odbSetParamShort(o.h, o.get_param(o, param), C.odbUSHORT(v), b2B(final))) {
+	if !b2b(C.odbSetParamShort(o.h, o.get_param(o, param), C.odbUSHORT(v), b2B(final))) {
 		err = oe2err(o.h)
 	}
 	return
 }
 
 func (o *Query) set_param_double(param interface{}, v float64, final bool) (err error) {
-	if !B2b(C.odbSetParamDouble(o.h, o.get_param(o, param), C.odbDOUBLE(v), b2B(final))) {
+	if !b2b(C.odbSetParamDouble(o.h, o.get_param(o, param), C.odbDOUBLE(v), b2B(final))) {
 		err = oe2err(o.h)
 	}
 	return
 }
 
 func (o *Query) set_param_byte(param interface{}, v byte, final bool) (err error) {
-	if !B2b(C.odbSetParamByte(o.h, o.get_param(o, param), C.odbBYTE(v), b2B(final))) {
+	if !b2b(C.odbSetParamByte(o.h, o.get_param(o, param), C.odbBYTE(v), b2B(final))) {
 		err = oe2err(o.h)
 	}
 	return
@@ -915,14 +902,14 @@ func (o *Query) set_param_timestamp(param interface{}, v time.Time, final bool) 
 	} else {
 		ts.ulFraction = C.odbULONG(v.Nanosecond())
 	}
-	if !B2b(C.odbSetParamTimestamp(o.h, o.get_param(o, param), &ts, b2B(final))) {
+	if !b2b(C.odbSetParamTimestamp(o.h, o.get_param(o, param), &ts, b2B(final))) {
 		err = oe2err(o.h)
 	}
 	return
 }
 
 func (o *Query) set_param_null(param interface{}, final bool) (err error) {
-	if !B2b(C.odbSetParamNull(o.h, o.get_param(o, param), b2B(final))) {
+	if !b2b(C.odbSetParamNull(o.h, o.get_param(o, param), b2B(final))) {
 		err = oe2err(o.h)
 	}
 	return
@@ -950,25 +937,13 @@ func b2B(b bool) C.odbBOOL {
 	return C.odbBOOL(0)
 }
 
-func B2b(b C.odbBOOL) bool {
+func b2b(b C.odbBOOL) bool {
 	if b == 0 {
 		return false
 	}
 	return true
 }
 
-func B2e(b C.odbBOOL) error {
-	if b == 0 {
-		return efalse
-	}
-	return nil
-}
-
-func oe2err_p(h C.odbHANDLE, format string, a ...interface{}) error {
-	e := C.GoString((*C.char)(unsafe.Pointer(C.odbGetErrorText(h))))
-	return fmt.Errorf("%v:"+format, e, a)
-}
-
-func oe2err(h handle) error {
+func oe2err(h C.odbHANDLE) error {
 	return errors.New(C.GoString((*C.char)(unsafe.Pointer(C.odbGetErrorText(h)))))
 }

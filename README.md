@@ -3,7 +3,7 @@
 #### Install 
 ```bash
 go get github.com/aletheia7/odb
-cd <sd location>
+cd <odb location>
 go generate 
 ```
 #### License 
