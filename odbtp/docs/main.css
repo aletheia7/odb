@@ -1,0 +1,28 @@
+	body
+	{
+		color : #000000;
+		background-color : #FFFFFF;
+		font-family : "Arial";
+	}
+
+	.PageTitle
+	{
+		font-family : "Arial";
+		font-size : 1.50em;
+		font-weight : bold
+	}
+
+	.MenuTitle
+	{
+		color : #000000;
+		word-wrap : none;
+		font-family : "Arial";
+		font-size : 0.85em;
+		font-weight : bold
+	}
+
+	.MenuItem
+	{
+		font-family : "Arial";
+		font-size : 0.85em;
+	}

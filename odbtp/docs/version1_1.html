@@ -1,0 +1,111 @@
+<html>
+<head>
+<title>ODBTP Version 1.1</title>
+<link href="main.css" rel="stylesheet" type="text/css">
+</head>
+<body>
+<table cellspacing="0" cellpadding="0" border="0">
+<tr>
+<td valign="top">
+<table cellspacing="3" cellpadding="0" border="0">
+<tr><td><nobr><a class="MenuItem" href="index.html">Home Page</a></nobr></td></tr>
+<tr><td><nobr><a class="MenuItem" href="features.html">Features</a></nobr></td></tr>
+<tr><td><nobr><a class="MenuItem" href="http://sourceforge.net/project/showfiles.php?group_id=70325">Download</a></nobr></td></tr>
+<tr><td><span class="MenuTitle">&nbsp;</span></td></tr>
+<tr><td><span class="MenuTitle">DOCUMENTATION</span></td></tr>
+<tr><td><nobr><a class="MenuItem" href="install.html">Installation</a></nobr></td></tr>
+<tr><td><nobr><a class="MenuItem" href="servconf.html">Server Configuration</a></nobr></td></tr>
+<tr><td><nobr><a class="MenuItem" href="clilib-index.html">Client Library</a></nobr></td></tr>
+<tr><td><nobr><a class="MenuItem" href="phpext-index.html">PHP Extension</a></nobr></td></tr>
+<tr><td><nobr><a class="MenuItem" href="examples.html">Examples</a></nobr></td></tr>
+<tr><td><nobr><a class="MenuItem" href="protocol-index.html">ODBTP Protocol</a></nobr></td></tr>
+<tr><td><span class="MenuTitle">&nbsp;</span></td></tr>
+<tr><td><span class="MenuTitle">DEVELOPMENT</span></td></tr>
+<tr><td><nobr><a class="MenuItem" href="http://sourceforge.net/projects/odbtp">SF Project Page</a></nobr></td></tr>
+<tr><td><nobr><a class="MenuItem" href="http://sourceforge.net/forum/?group_id=70325">Forums</a></nobr></td></tr>
+<tr><td><nobr><a class="MenuItem" href="http://sourceforge.net/tracker/?group_id=70325&atid=527367">Bugs</a></nobr></td></tr>
+<tr><td><nobr><a class="MenuItem" href="http://sourceforge.net/cvs/?group_id=70325">CVS</a></nobr></td></tr>
+<tr><td><span class="MenuTitle">&nbsp;</span></td></tr>
+<tr><td><span class="MenuTitle">HOSTED BY</span></td></tr>
+<tr><td><a href="http://sourceforge.net"><img src="http://sourceforge.net/sflogo.php?group_id=70325&type=2" width="125" height="37" border="0" alt="SourceForge.net Logo"></a></td></tr>
+</table>
+</td>
+<td><nobr>&nbsp;&nbsp;&nbsp;&nbsp;</nobr></td>
+<td valign="top">
+<span class="PageTitle">ODBTP -- Version 1.1 Changes</span>
+<p>
+<dl>
+<dt><b>Interface Files</b>
+<dd>
+To facilitate the process for connecting to databases,
+<a href="interface.html">interface file</a> support was added.
+An interface file provides the ability to connect to databases without
+the use of a complex ODBC driver connect string.
+<br>&nbsp;<br>
+</dd>
+<dt><b>Row Cache</b>
+<dd>
+The data rows from a query result set can be placed into a memory cache.
+This allows for the predetermination of row counts,  and the use
+of scrollable fetches without
+the need for a cursor.  It also provides the ability to maintain a result set
+without being connected to the server.
+<br>&nbsp;<br>
+</dd>
+<dt><b>Extended Column Information</b>
+<dd>
+Additional column intormation can optionally be provided by the server.
+This includes type, table, schema, and catalog name information.
+<br>&nbsp;<br>
+</dd>
+<dt><b>Stored Precedure Preparation</b>
+<dd>
+Special provisions for preparing stored procedures has been added.
+They are designed to make it as easy as possible to process stored
+procedures.  Procedure parameters can be set and retrieved
+without having to know their specifics.
+<br>&nbsp;<br>
+</dd>
+<dt><b>UNICODE Query Text Processing</b>
+<dd>
+The ability to execute UTF-8 encoded query text is optionally provided.
+This is achieved with the use of the UNICODE versions of the Win32
+ODBC API functions.
+<br>&nbsp;<br>
+</dd>
+<dt><b>Enhanced PHP Support</b>
+<dd>
+Many new functions have been added to the <a href="phpext-index.html">ODBTP PHP
+extension</a>.  In addition to the new functions, is support for the
+functions defined in the mssql extension.  This allows existing PHP scripts
+that use the mssql extension to use ODBTP without potentially any
+modifications.  A PEAR DB driver for ODBTP is also included for even
+more flexibility.
+<br>&nbsp;<br>
+</dd>
+<dt><b>Special Support for MS SQL Server</b>
+<dd>
+Special support for MS SQL Server database connections is provided by
+utilizing MSSQL specific aspects of the ODBC driver.  This includes
+additional column information, and extended error reporting.
+<br>&nbsp;<br>
+</dd>
+<dt><b>ODBC Information Retrieval</b>
+<dd>
+More <a href="clilib.html#attributes">ODB attributes</a> have
+been added to retrieve ODBC driver information.
+<br>&nbsp;<br>
+</dd>
+<dt><b>Direct Access to ODBC Catalog Functions</b>
+<dd>
+Access to the ODBC API catalog functions is made possible with the use of
+a special query text syntax. These functions include SQLGetTypeInfo,
+SQLTables, SQLColumns and SQLProcedures.
+<br>&nbsp;<br>
+</dd>
+</dl>
+</td>
+</tr>
+</table>
+</body>
+</html>

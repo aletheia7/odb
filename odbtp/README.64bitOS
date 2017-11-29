@@ -1,0 +1,28 @@
+Building ODBTP client library on a 64-bit OS
+----------------------------------------------------------------------
+
+On 64-bit operating systems, suzh as Tru64 UNIX, the C intrinsic data
+type "long" is 64 bits.  However, the ODBTP client library assumes
+that the "long" data type is 32 bits.  If the client library is built
+on a 64-bit system using the "out of the box" configuration,  then
+"Invalid Response" errors will occur during client application runtime.
+To prevent these errors from occuring, _C_LONG_64_ must be defined
+prior to compiling the library. This is doen by simply uncommenting the
+line in the file odbtp.h that defines this symbol
+
+Instructions:
+
+1. Open the file odbtp.h in a plain text editor, such as vi.
+
+2. Find the line containing the _C_LONG_64_ definition that has
+   been "commented out".
+
+      /* #define _C_LONG_64_ 1 */
+
+3. Uncomment the line by removing the /* and */.
+
+      #define _C_LONG_64_ 1
+
+4. Exit the editor, and then build the client library according
+   to the installation instructions.
+

@@ -1,0 +1,52 @@
+<html>
+<head>
+<title>sqltables.php</title>
+</head>
+<body>
+<h3>sqltables.php</h3>
+<pre>&lt;html&gt;
+&lt;head&gt;
+&lt;title&gt;SQLTables&lt;/title&gt;
+&lt;/head&gt;
+&lt;body&gt;
+&lt;?php
+    $con = odbtp_connect( 'odbtp.somewhere.com',
+                          'DRIVER={SQL Server};SERVER=myserver;UID=myuid;PWD=mypwd;DATABASE=mydatabase;' ) or die;
+
+    odbtp_use_row_cache() or die;
+
+    // Call ODBC API catalog function SQLTables to get list of tables.
+    $qryTables = odbtp_query( "||SQLTables" ) or die;
+
+    // Detach result so that another query can be executed on
+    // the same connection without losing this one.
+    odbtp_detach( $qryTables ) or die;
+
+    odbtp_attach_field( $qryTables, 2, $table ) or die;
+
+    echo "&lt;dl&gt;";
+    while( odbtp_fetch( $qryTables ) ) {
+        // Skip system tables.
+        if( !strncmp( $table, 'sys', 3 ) ) continue; // ignore system tables
+
+        echo "&lt;dt&gt;$table&lt;dd&gt;";
+
+        // Call ODBC API catalog function SQLColumns to get
+        // table columns.
+        $qryColumns = odbtp_query( "||SQLColumns|||$table" ) or die;
+        odbtp_attach_field( $qryColumns, 3, $column );
+        odbtp_attach_field( $qryColumns, 5, $type );
+
+        while( odbtp_fetch( $qryColumns ) ) {
+            echo "$column&nbsp;&nbsp;$type&lt;br&gt;";
+        }
+        echo "&nbsp;&lt;br&gt;&lt;/dd&gt;";
+    }
+    echo "&lt;/dl&gt;";
+
+    odbtp_close();
+?&gt;
+&lt;/body&gt;
+&lt;/html&gt;</pre>
+</body>
+</html>

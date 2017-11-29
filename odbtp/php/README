@@ -1,0 +1,36 @@
+Installation of ODBTP PHP Extension
+----------------------------------------------------------------------
+
+Static Version:
+
+1. Make a directory called "odbtp" under the <php dist dir>/ext
+   directory.
+
+2. Copy all files from <odbtp dist dir>/php/ext/odbtp to
+   <php dist dir>/ext/odbtp.
+
+3. "cd" to <php dist dir> and run ./buildconf.
+
+4. Run ./configure and include the --with-odbtp option along
+   with any other desired configure options.
+
+5. Make and install PHP.
+
+
+Shared Version:
+
+1. Change to the directory <odbtp dist dir>/php/ext.
+
+2. Open the file Makefile with a plain text editor, such as vi, and
+   change the value of PHP_INCROOT, if necessary.
+
+3. Run "make".
+
+4. Copy the file php_odbtp.so to a location where it can be loaded in
+   a PHP script with the dl() function.
+
+
+Example PHP scripts that can be used for testing are contained in
+<odbtp dist dir>/php/examples. The file odbtptest.sql can be used
+to build the table and stored procedures used by the init.php,
+list.php and rollback.php scripts.

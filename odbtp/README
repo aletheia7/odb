@@ -1,0 +1,19 @@
+ODBTP Version 1.1.3
+----------------------------------------------------------------------
+
+ODBTP (Open Database Transport Protocol) is intended for use as
+an interface to Win32 based ODBC drivers from a non-Win32 based
+application.  It consists of a Win32 service and a client
+library for building applications that can communicate with the service
+via TCP/IP.  The package also includes a PHP extension that was built
+using the client library.
+
+The ODBTP client/server package requires the installation of a Win32
+service, and a C client library. While the service can only be installed
+on a Win32 host, the client library can be installed on both non-Win32
+and Win32 hosts.
+
+* To install Win32 service, read the ./winservice/README file.
+* To build ODBTP client library, read the file INSTALL,
+* View README.64bitOS when building ODBTP client library on a 64-bit OS.
+* To install PHP extension, read the ./php/README file.

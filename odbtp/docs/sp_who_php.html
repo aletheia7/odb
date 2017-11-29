@@ -1,0 +1,41 @@
+<html>
+<head>
+<title>sp_who.php</title>
+</head>
+<body>
+<h3>sp_who.php</h3>
+<pre>&lt;html&gt;
+&lt;head&gt;
+&lt;title&gt;SP_WHO&lt;/title&gt;
+&lt;/head&gt;
+&lt;body&gt;
+&lt;?php
+
+    $con = odbtp_connect( 'odbtp.somewhere.com',
+                          'DRIVER={SQL Server};SERVER=myserver;UID=myuid;PWD=mypwd;DATABASE=mydb;' ) or die;
+
+    $qry = odbtp_query( "EXEC sp_who" ) or die;
+    odbtp_attach_field( $qry, "spid", $spid ) or die;
+    odbtp_attach_field( $qry, "loginame", $loginame ) or die;
+    odbtp_attach_field( $qry, "dbname", $dbname ) or die;
+
+    echo "&lt;table cellpadding=2 cellspacing=0 border=1&gt;\n";
+    echo "&lt;tr&gt;&lt;td&gt;&nbsp;spid&nbsp;&lt;/td&gt;"
+       . "&lt;td&gt;&nbsp;loginame&nbsp;&lt;/td&gt;"
+       . "&lt;td&gt;&nbsp;dbname&nbsp;&lt;/td&gt;&lt;/tr&gt;";
+
+    while( odbtp_fetch( $qry ) ) {
+        if( is_null( $dbname ) ) $dbname = "NULL";
+        echo "&lt;tr&gt;&lt;td&gt;&nbsp;$spid&nbsp;&lt;/td&gt;"
+           . "&lt;td&gt;&nbsp;$loginame&nbsp;&lt;/td&gt;"
+           . "&lt;td&gt;&nbsp;$dbname&nbsp;&lt;/td&gt;&lt;/tr&gt;";
+
+    }
+    echo "&lt;/table&gt;";
+
+    odbtp_close();
+?&gt;
+&lt;/body&gt;
+&lt;/html&gt;</pre>
+</body>
+</html>

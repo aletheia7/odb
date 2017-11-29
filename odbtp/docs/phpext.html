@@ -1,0 +1,1218 @@
+<html>
+<head>
+<title>ODBTP PHP Extension</title>
+<link href="main.css" rel="stylesheet" type="text/css">
+</head>
+<body>
+<span class="PageTitle">ODBTP -- PHP Extension</span>
+<p>
+<h3><a name="phpini">Runtime Configuration Options (php.ini)</a></h3>
+<table cellpadding="5" cellspacing="0" border="1">
+<tr>
+<td><small><b>Option</b></small></td>
+<td><small><b>Type</b></small></td>
+<td><small><b>Default</b></small></td>
+<td><small><b>Description</b></small></td>
+</tr>
+<tr>
+<td valign="top"><small>odbtp.interface_file</small></td>
+<td valign="top"><small>string</small></td>
+<td valign="top"><small>"/usr/local/share/odbtp.conf"</small></td>
+<td><small>
+Path to ODBTP <a href="interface.html">interface file</a>.
+</small></td>
+</tr>
+<tr>
+<td valign="top"><small>odbtp.datetime_format</small></td>
+<td valign="top"><small>string</small></td>
+<td valign="top"><small>"object"</small></td>
+<td><small>
+Format to use when returning data from datetime fields.  One of the
+following formats can be chosen:<p>
+<nobr>object - <a href="#new_datetime">datetime</a> object.</nobr><br>
+<nobr>ctime - C time value.</nobr><br>
+<nobr>iso - YYYY/MM/DD HH:MM:SS</nobr><br>
+<nobr>mdyhm - <code>Jan  7 2000 02:39PM</code></nobr><br>
+<nobr>mdyhms - <code>Jan  7 2000 02:39:06PM</code></nobr><br>
+<nobr>mdyhmsf - <code>Jan  7 2000 02:39:06.480PM</code></nobr>
+</small></td>
+</tr>
+<tr>
+<td valign="top"><small>odbtp.detach_default_queries</small></td>
+<td valign="top"><small>boolean</small></td>
+<td valign="top"><small>no</small></td>
+<td><small>
+Automatically <a href="#detach">detach</a> default queory resources prior to executing
+or preparing another query.
+</small></td>
+</tr>
+<tr>
+<td valign="top"><small>odbtp.guid_format</small></td>
+<td valign="top"><small>string</small></td>
+<td valign="top"><small>"string"</small></td>
+<td><small>
+Format to use when returning data from GUID (uniqueidentifier) fields.
+The choices are "object" or "string."
+</small></td>
+</tr>
+<tr>
+<td valign="top"><small>odbtp.truncation_errors</small></td>
+<td valign="top"><small>boolean</small></td>
+<td valign="top"><small>yes</small></td>
+<td><small>
+Generate errors if field or parameter data is truncated.
+</small></td>
+</tr>
+</table>
+<p>
+<h3><a name="mssql">Microsoft SQL Server Support</a></h3>
+Follow the below steps to provide support for and compatibility with
+the functions from the mssql extension.
+<ol>
+<li><a href="install.html#phpmssql">Install</a> the odbtp extension with mssql support.<br><br>
+<li>Create an ODBTP <a href="interface.html">interface file</a>, i.e.,
+<code>odbtp.conf</code>, containing the below lines:
+<pre>
+[global]
+type = mssql
+odbtp host = <i>hostname or IP address of ODBTP server</i>
+use row cache = yes
+right trim text = yes
+</pre>
+<li>Add the following lines to the php.ini file:
+<pre>
+[odbtp]
+odbtp.interface_file = "<i>full path name of odbtp.conf file</i>"
+odbtp.datetime_format = mdyhmsf
+odbtp.detach_default_queries = yes
+</pre>
+</ol>
+Note:  The odbtp extension with mssql support cannot be loaded with
+the mssql extension because of namespace conflicts.  To test an existing
+PHP script that uses the mssql extension without having to include mssql
+support in the odbtp extension, the following can be done:
+<ol>
+<li>Copy the PHP script file to a different location or filename.
+<li>Replace all instances of the text "mssql_" to "odbtp_" in the copied file.
+<li>Run the modified script.
+</ol>
+<p>
+<h3><a name="constants">Predefined Constants</a></h3>
+<h4><a name="attributes">ODB Attributes</a></h4>
+<table cellpadding="5" cellspacing="0" border="1">
+<tr><td><small><b>Attribute</b></small></td><td><small><b>Type</b></small></td><td><small><b>Description</b></small></td></tr>
+<tr><td valign="top"><small>ODB_ATTR_CACHEPROCS</small></td><td valign="top"><small>Long</small></td><td><small>Determines if prepared procedure information should be cached. If the value is set to 0, then the cache will not be used.</small></td></tr>
+<tr><td valign="top"><small>ODB_ATTR_DATABASENAME</small></td><td valign="top"><small>String</small></td><td><small>Database name [read only].</small></td></tr>
+<tr><td valign="top"><small>ODB_ATTR_DBMSNAME</small></td><td valign="top"><small>String</small></td><td><small>DBMS name [read only].</small></td></tr>
+<tr><td valign="top"><small>ODB_ATTR_DBMSVER</small></td><td valign="top"><small>String</small></td><td><small>DBMS version [read only].</small></td></tr>
+<tr><td valign="top"><small>ODB_ATTR_DESCRIBEPARAMS</small></td><td valign="top"><small>Long</small></td><td><small>Used to determine whether or not ODBTP server should try to describe parameters after preparing a query. If the value is set to 0, the server will not try to describe the parameters.</small></td></tr>
+<tr><td valign="top"><small>ODB_ATTR_DRIVER</small></td><td valign="top"><small>Long</small></td><td><small>Driver type [read only].  Valid types are:<p>ODB_DRIVER_UNKNOWN<br> ODB_DRIVER_MSSQL<br> ODB_DRIVER_JET<br>ODB_DRIVER_FOXPRO<br> ODB_DRIVER_ORACLE<br> ODB_DRIVER_SYBASE<br> ODB_DRIVER_DB2<br>ODB_DRIVER_MYSQL </small></td></tr>
+<tr><td valign="top"><small>ODB_ATTR_DRIVERNAME</small></td><td valign="top"><small>String</small></td><td><small>Driver name [read only].</small></td></tr>
+<tr><td valign="top"><small>ODB_ATTR_DRIVERODBCVER</small></td><td valign="top"><small>String</small></td><td><small>Driver ODBC version [read only].</small></td></tr>
+<tr><td valign="top"><small>ODB_ATTR_DRIVERVER</small></td><td valign="top"><small>String</small></td><td><small>Driver version [read only].</small></td></tr>
+<tr><td valign="top"><small>ODB_ATTR_DSN</small></td><td valign="top"><small>String</small></td><td><small>Data source name [read only].</small></td></tr>
+<tr><td valign="top"><small>ODB_ATTR_FETCHROWCOUNT</small></td><td valign="top"><small>Long</small></td><td><small>Number of rows returned by the server per fetch row request.  This attribute applies only to forward-only cursors, and is used to improve performance.  Only one row per request is sent by the server for static, keyset and dynamic cursors.</small></td></tr>
+<tr><td valign="top"><small>ODB_ATTR_FULLCOLINFO</small></td><td valign="top"><small>Long</small></td><td><small>Used to determine whether or not full column info should be sent. If the value is set to 0, then minimal column info will be sent.</small></td></tr>
+<tr><td valign="top"><small>ODB_ATTR_MAPCHARTOWCHAR</small></td><td valign="top"><small>Long</small></td><td><small>Determines if character data types should be mapped to wide character. If the value is set to 0, then the mapping will not be performed.</small></td></tr>
+<tr><td valign="top"><small>ODB_ATTR_OICLEVEL</small></td><td valign="top"><small>Long</small></td><td><small>ODBC interface conformance level [read only]. Possible values are:<p>ODB_OIC_CORE<br>ODB_OIC_LEVEL1<br>ODB_OIC_LEVEL2</small></td></tr>
+<tr><td valign="top"><small>ODB_ATTR_QUERYTIMEOUT</small></td><td valign="top"><small>Long</small></td><td><small>Query execution timeout in seconds.</small></td></tr>
+<tr><td valign="top"><small>ODB_ATTR_RIGHTTRIMTEXT</small></td><td valign="top"><small>Long</small></td><td><small>Used to determine whether or not trailing space characters should be removed from text data during retrieval. If the value is set to 0, text data will not be trimmed by the server.</small></td></tr>
+<tr><td valign="top"><small>ODB_ATTR_SERVERNAME</small></td><td valign="top"><small>String</small></td><td><small>Database server name [read only].</small></td></tr>
+<tr><td valign="top"><small>ODB_ATTR_TRANSACTIONS</small></td><td valign="top"><small>Long</small></td><td><small>Transaction type used for queries.  Valid types are:<p>ODB_TXN_NONE<br>ODB_TXN_DEFAULT<br>ODB_TXN_READUNCOMMITTED<br>ODB_TXN_READCOMMITTED<br>ODB_TXN_REPEATABLEREAD<br>ODB_TXN_SERIALIZABLE</small></td></tr>
+<tr><td valign="top"><small>ODB_ATTR_TXNCAPABLE</small></td><td valign="top"><small>Long</small></td><td><small>Indicates whether or not ODBC driver supports transactions [read only]. 1 if yes, and 0 if no.</small></td></tr>
+<tr><td valign="top"><small>ODB_ATTR_UNICODESQL</small></td><td valign="top"><small>Long</small></td><td><small>Used to determine whether or not SQL query strings should be submitted using UTF8 encoded UNICODE characters. If the value is set to 0, then normal characters should be used.</small></td></tr>
+<tr><td valign="top"><small>ODB_ATTR_USERNAME</small></td><td valign="top"><small>String</small></td><td><small>Database user name [read only].</small></td></tr>
+<tr><td valign="top"><small>ODB_ATTR_VARDATASIZE</small></td><td valign="top"><small>Long</small></td><td><small>Maximum size of buffer for variable length data if it is not explicitly specified when binding a column or parameter.</small></td></tr>
+</table>
+<h4><a name="datatypes">ODB Data Types</a></h4>
+<table cellpadding="5" cellspacing="0" border="1">
+<tr><td><small><b>Type</b></small></td><td><small><b>SQL Type</b></small></td><td><small><b>Default Type</b></small></td><td><small><b>PHP Type</b></small></td></tr>
+<tr><td><small>ODB_BINARY</small></td><td><small>binary, varbinary, image</small></td><td><small>ODB_BINARY</small></td><td><small>string (binary)</small></td></tr>
+<tr><td><small>ODB_BIGINT</small></td><td><small>bigint</small></td><td><small>ODB_BIGINT</small></td><td><small>string (numeric text)</small></td></tr>
+<tr><td><small>ODB_UBIGINT</small></td><td><small>&nbsp;</small></td><td><small>&nbsp;</small></td><td><small>string (numeric text)</small></td></tr>
+<tr><td><small>ODB_BIT</small></td><td><small>bit</small></td><td><small>ODB_BIT</small></td><td><small>bool</small></td></tr>
+<tr><td><small>ODB_CHAR</small></td><td><small>char, varchar, text</small></td><td><small>ODB_CHAR</small></td><td><small>string (text)</small></td></tr>
+<tr><td><small>ODB_DATE</small></td><td><small>&nbsp;</small></td><td><small>&nbsp;</small></td><td><small>string (binary)</small></td></tr>
+<tr><td><small>ODB_DATETIME</small></td><td><small>smalldatetime, datetime</small></td><td><small>ODB_DATETIME</small></td><td><small>object (datetime)</small></td></tr>
+<tr><td><small>ODB_DOUBLE</small></td><td><small>float</small></td><td><small>ODB_DOUBLE</small></td><td><small>double</small></td></tr>
+<tr><td><small>ODB_GUID</small></td><td><small>uniqueidentifier</small></td><td><small>ODB_GUID</small></td><td><small>object (guid)</small></td></tr>
+<tr><td><small>ODB_INT</small></td><td><small>int</small></td><td><small>ODB_INT</small></td><td><small>long</small></td></tr>
+<tr><td><small>ODB_UINT</small></td><td><small>&nbsp;</small></td><td><small>&nbsp;</small></td><td><small>long</small></td></tr>
+<tr><td><small>ODB_NUMERIC</small></td><td><small>decimal, numeric</small></td><td><small>ODB_CHAR</small></td><td><small>string (binary)</small></td></tr>
+<tr><td><small>ODB_REAL</small></td><td><small>real</small></td><td><small>ODB_REAL</small></td><td><small>double</small></td></tr>
+<tr><td><small>ODB_SMALLINT</small></td><td><small>smallint</small></td><td><small>ODB_SMALLINT</small></td><td><small>long</small></td></tr>
+<tr><td><small>ODB_USMALLINT</small></td><td><small>&nbsp;</small></td><td><small>&nbsp;</small></td><td><small>long</small></td></tr>
+<tr><td><small>ODB_TIME</small></td><td><small>&nbsp;</small></td><td><small>&nbsp;</small></td><td><small>string (binary)</small></td></tr>
+<tr><td><small>ODB_TINYINT</small></td><td><small>&nbsp;</small></td><td><small>&nbsp;</small></td><td><small>long</small></td></tr>
+<tr><td><small>ODB_UTINYINT</small></td><td><small>tinyint</small></td><td><small>ODB_UTINYINT</small></td><td><small>long</small></td></tr>
+<tr><td><small>ODB_WCHAR</small></td><td><small>nchar, nvarchar, ntext</small></td><td><small>ODB_WCHAR</small></td><td><small>string (UTF-8 text)</small></td></tr>
+</table>
+<small>
+NOTE: SQL Type is the corresponding SQL data type, and Default Type is
+the default ODB data type chosen by the server for the SQL data type.  The
+default ODB data type for SQL data types not listed in the above table is ODB_CHAR.
+PHP Type is the PHP data type used for the ODB data type.
+</small>
+<h4><a name="paramtypes">ODB Parameter Types</a></h4>
+<table cellpadding="5" cellspacing="0" border="1">
+<tr><td><small><b>Type</b></small></td><td><small><b>Description</b></small></td></tr>
+<tr><td valign="top"><small>ODB_PARAM_NONE</small></td><td><small>Indicates that parameter is undefined.</small></td></tr>
+<tr><td valign="top"><small>ODB_PARAM_INPUT</small></td><td><small>Indicates that parameter is used for input.</small></td></tr>
+<tr><td valign="top"><small>ODB_PARAM_OUTPUT</small></td><td><small>Indicates that parameter is used for output.</small></td></tr>
+<tr><td valign="top"><small>ODB_PARAM_INOUT</small></td><td><small>Indicates that parameter is used for input and output.</small></td></tr>
+<tr><td valign="top"><small>ODB_PARAM_RETURNVAL</small></td><td><small>Indicates that parameter is a stored procedure's return value.</small></td></tr>
+<tr><td valign="top"><small>ODB_PARAM_RESULTCOL</small></td><td><small>Indicates that parameter is a result column.</small></td></tr>
+</table>
+<h4><a name="cursortypes">ODB Cursor Types</a></h4>
+<table cellpadding="5" cellspacing="0" border="1">
+<tr><td><small><b>Type</b></small></td><td><small><b>Description</b></small></td></tr>
+<tr><td valign="top"><small>ODB_CURSOR_FORWARD</small></td><td><small>Forward-only cursor.  This is the default cursor type, and does not support scrolling or row operations.</small></td></tr>
+<tr><td valign="top"><small>ODB_CURSOR_STATIC</small></td><td><small>Static (read-only) cursor.  This cursor supports scrolling, and row operations that do not modify the underlying data.</small></td></tr>
+<tr><td valign="top"><small>ODB_CURSOR_KEYSET</small></td><td><small>Keyset cursor.  This cursor supports scrolling, and all row operations.</small></td></tr>
+<tr><td valign="top"><small>ODB_CURSOR_DYNAMIC</small></td><td><small>Dynamic cursor.  This cursor supports scrolling, and all row operations.</small></td></tr>
+</table>
+<h4><a name="concurtypes">ODB Cursor Concurrency Types</a></h4>
+<table cellpadding="5" cellspacing="0" border="1">
+<tr><td><small><b>Type</b></small></td><td><small><b>Description</b></small></td></tr>
+<tr><td valign="top"><small>ODB_CONCUR_DEFAULT</small></td><td><small>Use to specify default concurrency for a cursor.  The default concurrency for forward-only and static cursors is read-only, and row version for keyset and dynamic cursors.</small></td></tr>
+<tr><td valign="top"><small>ODB_CONCUR_READONLY</small></td><td><small>Use to specify read-only concurrency for a cursor.</small></td></tr>
+<tr><td valign="top"><small>ODB_CONCUR_LOCK</small></td><td><small>Use to specify scroll lock concurrency for a cursor.</small></td></tr>
+<tr><td valign="top"><small>ODB_CONCUR_ROWVER</small></td><td><small>Use to specify row version concurrency for a cursor.</small></td></tr>
+<tr><td valign="top"><small>ODB_CONCUR_VALUES</small></td><td><small>Use to specify value-based concurrency for a cursor.</small></td></tr>
+</table>
+<h4><a name="fetchtypes">ODB Fetch Types</a></h4>
+<table cellpadding="5" cellspacing="0" border="1">
+<tr><td><small><b>Type</b></small></td><td><small><b>Description</b></small></td></tr>
+<tr><td valign="top"><small>ODB_FETCH_DEFAULT</small></td><td><small>Fetch row using default method, which is a forward fetch.</small></td></tr>
+<tr><td valign="top"><small>ODB_FETCH_FIRST</small></td><td><small>Fetch first row.</small></td></tr>
+<tr><td valign="top"><small>ODB_FETCH_LAST</small></td><td><small>Fetch last row.</small></td></tr>
+<tr><td valign="top"><small>ODB_FETCH_NEXT</small></td><td><small>Fetch next row.</small></td></tr>
+<tr><td valign="top"><small>ODB_FETCH_PREV</small></td><td><small>Fetch previous row.</small></td></tr>
+<tr><td valign="top"><small>ODB_FETCH_ABS</small></td><td><small>Fetch row absolutely.</small></td></tr>
+<tr><td valign="top"><small>ODB_FETCH_REL</small></td><td><small>Fetch row relative to current row.</small></td></tr>
+<tr><td valign="top"><small>ODB_FETCH_BOOKMARK</small></td><td><small>Fetch row relative to bookmarked row.</small></td></tr>
+<tr><td valign="top"><small>ODB_FETCH_REREAD</small></td><td><small>Reread last fetched row.</small></td></tr>
+</table>
+<h4><a name="rowstatus">ODB Row Status Values</a></h4>
+<table cellpadding="5" cellspacing="0" border="1">
+<tr><td><small><b>Status</b></small></td><td><small><b>Description</b></small></td></tr>
+<tr><td valign="top"><small>ODB_ROWSTAT_ERROR</small></td><td><small>An error occurred for row.</small></td></tr>
+<tr><td valign="top"><small>ODB_ROWSTAT_SUCCESS</small></td><td><small>Successfully fetched row.</small></td></tr>
+<tr><td valign="top"><small>ODB_ROWSTAT_UPDATED</small></td><td><small>Row was updated.</small></td></tr>
+<tr><td valign="top"><small>ODB_ROWSTAT_DELETED</small></td><td><small>Row was deleted.</small></td></tr>
+<tr><td valign="top"><small>ODB_ROWSTAT_ADDED</small></td><td><small>Row was added.</small></td></tr>
+<tr><td valign="top"><small>ODB_ROWSTAT_NOROW</small></td><td><small>Not a valid row.</small></td></tr>
+<tr><td valign="top"><small>ODB_ROWSTAT_UNKNOWN</small></td><td><small>Status of row is unknown or could not be determined.</small></td></tr>
+</table>
+<br>&nbsp;
+<h3><a name="functions">Functions</a></h3>
+<a name="affected_rows"><b>odbtp_affected_rows</b></a><p>
+<small>odbtp_affected_rows -- get number of affected rows in last query</small><p>
+Description<p>
+<small>long odbtp_affected_rows(resource odbtp_query)<p>
+Returns the number of rows affected for the current result of an <i>odbtp_query</i>.
+</small><br>&nbsp;<br>
+<a name="allocate_query"><b>odbtp_allocate_query</b></a><p>
+<small>odbtp_allocate_query -- allocate query resource</small><p>
+Description<p>
+<small>resource odbtp_allocate_query([resource odbtp_connection])<p>
+Allocates an ODBTP query resource for <i>odbtp_connection</i>.  If
+<i>odbtp_connection</i> is not specified, then the default ODBTP connection resource will be used.
+The return value is the ODBTP query resource, or FALSE if the function fails.<p>
+If <i>odbtp_connection</i> was not used in a prior call to
+odbtp_allocate_query,
+<a href="#get_query">odbtp_get_query</a>,
+<a href="#query">odbtp_query</a> or
+<a href="#prepare">odbtp_prepare</a>,
+then the returned resource
+will be the primary ODBTP query resource for <i>odbtp_connection</i>.
+The primary ODBTP query resource is used when calls to
+<a href="#query">odbtp_query</a> or <a href="#prepare">odbtp_prepare</a>
+are made with an ODBTP connection resource.
+</small><br>&nbsp;<br>
+<a name="attach_field"><b>odbtp_attach_field</b></a><p>
+<small>odbtp_attach_field -- attach result set field to variable</small><p>
+Description<p>
+<small>bool odbtp_attach_field(resource odbtp_query, mixed field_id, mixed var[, long data_type[, long length]])<p>
+Attaches the <i>odbtp_query</i> result field <i>field_id</i> to the variable
+referenced by <i>var</i>.  The <a href="#datatypes">ODB data type</a>
+binding can be optionally changed with <i>data_type</i>.
+If <i>length</i> is included with <i>data_type</i>,
+then it will be used as the maximum size for the bound data buffer,
+otherwise the server will try to determine it via the ODBC driver.
+If <i>data_type</i> is a fixed length <a href="#datatypes">ODB data type</a>,
+the <i>length</i> is ignored.
+The parameter <i>field_id</i> can either be the name or 0-based number
+of the field.
+The return value is FALSE if the function fails.
+</small><br>&nbsp;<br>
+<a name="attach_param"><b>odbtp_attach_param</b></a><p>
+<small>odbtp_attach_param -- attach prepared parameter to variable</small><p>
+Description<p>
+<small>bool odbtp_attach_param(resource odbtp_query, mixed param_id, mixed var[, long data_type[, long length]])<p>
+Attaches the <i>odbtp_query</i> prepared parameter <i>param_id</i> to the variable
+referenced by <i>var</i>.  The <a href="#datatypes">ODB data type</a>
+binding can be optionally changed with <i>data_type</i>.
+If <i>length</i> is included with <i>data_type</i>,
+then it will be used as the maximum size for the bound data buffer,
+otherwise the server will try to determine it via the ODBC driver.
+If <i>data_type</i> is a fixed length <a href="#datatypes">ODB data type</a>,
+the <i>length</i> is ignored.
+The value of <i>param_id</i> can either be the name or 1-based number
+of the prepared parameter.
+The return value is FALSE if the function fails.
+</small><br>&nbsp;<br>
+<a name="bind_field"><b>odbtp_bind_field</b></a><p>
+<small>odbtp_bind_field -- bind result set field to data type</small><p>
+Description<p>
+<small>bool odbtp_bind_field(resource odbtp_query, mixed field_id, long data_type[, long length])<p>
+Binds the <i>odbtp_query</i> result field <i>field_id</i> to the <a href="#datatypes">ODB data type</a> <i>data_type</i>.
+If <i>length</i> is specified, then it will be used as the maximum size for the bound data buffer, otherwise the
+server will try to determine it via the ODBC driver.  If <i>data_type</i> is a fixed length <a href="#datatypes">ODB data type</a>, the <i>length</i> is ignored.
+The parameter <i>field_id</i> can either be the name or 0-based number of the field.
+The return value is FALSE if the function fails.
+</small><br>&nbsp;<br>
+<a name="close"><b>odbtp_close</b></a><p>
+<small>odbtp_close -- close ODBTP connection</small><p>
+Description<p>
+<small>void odbtp_close([resource odbtp_connection[, bool disconnect_db]])<p>
+Closes the <i>odbtp_connection</i>.  If <i>odbtp_connection</i> is not specified, then the default
+ODBTP connection resource will be closed.  Set <i>disconnect_db</i> to TRUE if it is no longer necessary
+for the server to maintain its connection to the database for future use.  The default for this parameter is FALSE.
+<i>disconnect_db</i> should only be used with reserved database connections, Setting it
+to TRUE for non-reserved database connections prevents them from being pooled.
+</small><br>&nbsp;<br>
+<a name="commit"><b>odbtp_commit</b></a><p>
+<small>odbtp_commit -- commit current transaction</small><p>
+Description<p>
+<small>bool odbtp_commit([resource odbtp_connection])<p>
+Commits the database transactions since the last commit or rollback. If <i>odbtp_connection</i>
+is not specified, then the default ODBTP connection resource will be used.  This function is only applicable
+if the <a href="#attributes">ODB attribute</a> ODB_ATTR_TRANSACTIONS is not set to ODB_TXN_NONE.  The
+return value is FALSE if the function fails.
+</small><br>&nbsp;<br>
+<a name="connect"><b>odbtp_connect</b></a><p>
+<small>odbtp_connect -- connect to ODBTP service</small><p>
+Description<p>
+<small>resource odbtp_connect(string host, string dbconnect)<p>
+resource odbtp_connect(string interface[, string username[, string password[, string database]]])<p>
+Establishes a database connection via an ODBTP server, and
+returns the corresponding ODBTP connection resource or FALSE if it fails.<p>
+In the first version, the parameter <i>host</i> is used to specify the ODBTP server with the following format:<p>
+<code>&nbsp;&nbsp;servname[:servport[:conntimeout[:readtimeout]]]</code><p>
+<code>servname</code> is either the hostname or IP address of the server. <code>servport</code> is the IP port used by
+the server (default is 2799). <code>conntimeout</code> is the maximum time in seconds to wait for a connection to be
+establised with the server (default is 10 seconds).  <code>readtimeout</code> is the maximum time in seconds
+to wait for data to be read from the server (default is 300 seconds).  Examples:<p>
+<code>
+&nbsp;&nbsp;odbtp.somewhere.com<br>
+&nbsp;&nbsp;odbtp.somewhere.com:6177<br>
+&nbsp;&nbsp;odbtp.somewhere.com:6177:30<br>
+&nbsp;&nbsp;odbtp.somewhere.com:6177:30:45
+</code><p>
+The parameter <i>db_connect</i> is the ODBC connect string corresponding to the
+database to which the server will establish a connection.  Examples:<p>
+<code>
+&nbsp;&nbsp;DRIVER={SQL Server};SERVER=(local);UID=myuid;PWD=mypwd;DATABASE=mydb;<br>
+&nbsp;&nbsp;DRIVER={Microsoft Access Driver (*.mdb)};DBQ=c:\\mydb.mdb;UID=admin;PWD=;<br>
+&nbsp;&nbsp;DRIVER={Oracle ODBC Driver};DBQ=MYDB;UID=myuid;PWD=mypwd;<br>
+&nbsp;&nbsp;DRIVER={Sybase ASE ODBC Driver};SRVR=MYSRVR;UID=myuid;PWD=mypwd;DATABASE=mydb;
+</code><p>
+In the second version, the parameter <i>interface</i> specifies the name of
+an interface defined in an <a href="interface.html">interface file</a>. The
+parameters <i>username</i>, <i>password</i> and <i>database</i> are optional
+parameters that can be used with the interface.
+<p>
+Note: The most recent ODBTP connection resource returned by either
+odbtp_connect,
+<a href="#rconnect">odbtp_rconnect</a> or <a href="#sconnect">odbtp_sconnect</a>
+will become the default ODBTP connection resource.  This resource is
+used by functions that have an optional ODBTP connection resource parameter,
+such as, <a href="#close">odbtp_close</a>.
+</small><br>&nbsp;<br>
+<a name="connect_id"><b>odbtp_connect_id</b></a><p>
+<small>odbtp_connect_id -- get connection id</small><p>
+Description<p>
+<small>string odbtp_connect_id([resource odbtp_connection])<p>
+Returns the ODBTP connection ID for <i>odbtp_connection</i>.  If
+<i>odbtp_connection</i> is not specified, then the default ODBTP connection resource is
+used. This function is typically called if <i>odbtp_connection</i> was established
+with <a href="#rconnect">odbtp_rconnect</a>.  The returned ID string can then be
+used to reestablish a connection to the corresponding reserved database connection.
+The function returns FALSE if it fails.
+</small><br>&nbsp;<br>
+<a name="convert_all"><b>odbtp_convert_all</b></a><p>
+<small>odbtp_convert_all -- convert all field data to character format</small><p>
+Description<p>
+<small>bool odbtp_convert_all([resource odbtp_connection[, bool convert]])<p>
+Convert all result field data to character format for subsequent queries
+associated with <i>odbtp_connection</i>.
+If <i>odbtp_connection</i> is not specified, then the default
+ODBTP connection resource will be used.
+Set <i>convert</i> to TRUE to enable the conversion, or FALSE to disable it.
+If not specified, the default value for <i>convert</i> is TRUE.
+The return value is FALSE if the function fails.
+</small><br>&nbsp;<br>
+<a name="convert_datetime"><b>odbtp_convert_datetime</b></a><p>
+<small>odbtp_convert_datetime -- convert datetime field data to character format</small><p>
+Description<p>
+<small>bool odbtp_convert_datetime([resource odbtp_connection[, bool convert]])<p>
+Convert all datetime result field data to character format for subsequent queries
+associated with <i>odbtp_connection</i>.
+If <i>odbtp_connection</i> is not specified, then the default
+ODBTP connection resource will be used.
+Set <i>convert</i> to TRUE to enable the conversion, or FALSE to disable it.
+If not specified, the default value for <i>convert</i> is TRUE.
+The return value is FALSE if the function fails.
+</small><br>&nbsp;<br>
+<a name="convert_guid"><b>odbtp_convert_guid</b></a><p>
+<small>odbtp_convert_guid -- convert GUID (uniqueidentifier) field data to character format</small><p>
+Description<p>
+<small>bool odbtp_convert_guid([resource odbtp_connection[, bool convert]])<p>
+Convert all GUID result field data to character format for subsequent queries
+associated with <i>odbtp_connection</i>.
+If <i>odbtp_connection</i> is not specified, then the default
+ODBTP connection resource will be used.
+Set <i>convert</i> to TRUE to enable the conversion, or FALSE to disable it.
+If not specified, the default value for <i>convert</i> is TRUE.
+The return value is FALSE if the function fails.
+</small><br>&nbsp;<br>
+<a name="ctime2datetime"><b>odbtp_ctime2datetime</b></a><p>
+<small>odbtp_ctime2datetime -- convert a C time value into a datetime object</small><p>
+Description<p>
+<small>object odbtp_ctime2datetime(long ctime_val)<p>
+Returns the datetime object equivaluent of the C time value <i>ctime_val</i>.
+See <a href="#new_datetime">odbtp_new_datetime</a> for a description of the datetime object.
+</small><br>&nbsp;<br>
+<a name="data_seek"><b>odbtp_data_seek</b></a><p>
+<small>odbtp_data_seek -- move to a specific row</small><p>
+Description<p>
+<small>bool odbtp_data_seek(resource odbtp_query, long row)<p>
+If row caching has been enabled with <a href="#use_row_cache">odbtp_use_row_cache</a>,
+this function can be used to move to the specified <i>row</i> within
+the cache associated with <i>odbtp_query</i>.  The value for <i>row</i> is
+0-based.
+The function returns FALSE if it fails.
+</small><br>&nbsp;<br>
+<a name="datetime2ctime"><b>odbtp_datetime2ctime</b></a><p>
+<small>odbtp_datetime2ctime -- convert a datetime object into a C time value</small><p>
+Description<p>
+<small>long odbtp_datetime2ctime(object datetime_obj)<p>
+Returns the C time value equivaluent of the datetime object <i>datetime_obj</i>.
+See <a href="#new_datetime">odbtp_new_datetime</a> for a description of the datetime object.
+</small><br>&nbsp;<br>
+<a name="detach"><b>odbtp_detach</b></a><p>
+<small>odbtp_detach -- detach query from connection</small><p>
+Description<p>
+<small>bool odbtp_detach(resource odbtp_query)<p>
+Detaches the <i>odbtp_query</i> resource from the underlying
+connection.  When a query resouce is detached, its result set is retained
+even if another query is executed with the same connection, or if the
+connection is closed. odbtp_detach should only be used if row caching
+has been enabled with <a href="#use_row_cache">odbtp_use_row_cache</a> and
+all of the result set's rows are in the cache.
+The function returns FALSE if it fails.
+</small><br>&nbsp;<br>
+<a name="dont_pool_dbc"><b>odbtp_dont_pool_dbc</b></a><p>
+<small>odbtp_dont_pool_dbc -- don't pool DB connection</small><p>
+Description<p>
+<small>bool odbtp_dont_pool_dbc([resource odbtp_connection[, bool dont]])<p>
+Don't place the underlying database connection associated with
+<i>odbtp_connection</i> into the pool.
+If <i>odbtp_connection</i> is not specified, then the default
+ODBTP connection resource will be used.
+Set <i>dont</i> to TRUE to prevent pooling of DB connection, or FALSE to
+allow it to be pooled.
+If not specified, the default value for <i>dont</i> is TRUE.
+The return value is FALSE if the function fails.
+</small><br>&nbsp;<br>
+<a name="execute"><b>odbtp_execute</b></a><p>
+<small>odbtp_execute -- execute previously prepared query</small><p>
+Description<p>
+<small>bool odbtp_execute(resource odbtp_query)<p>
+Executes a previously prepared query for <i>odbtp_query</i>.
+If the execution is successful, then <i>odbtp_query</i> can be used to obtain the results.
+The function will return FALSE if it fails.
+See alse <a href="#prepare">odbtp_prepare</a>.
+</small><br>&nbsp;<br>
+<a name="fetch"><b>odbtp_fetch</b></a><p>
+<small>odbtp_fetch -- fetch row</small><p>
+Description<p>
+<small>bool odbtp_fetch(resource odbtp_query[, long fetch_type[, long fetch_param]])<p>
+Fetches a row from the current resutl set associated with <i>odbtp_query</i>.
+The fetched field data can be obtained with <a href="#field">odbtp_field</a>.
+The <i>fetch_type</i> specifies the <a href="#fetchtypes">ODB fetch type</a>,
+<i>fetch_param</i> is the parameter for <i>fetch_type</i>, and is only required
+for <a href="#fetchtypes">ODB fetch types</a> ODB_FETCH_ABS, ODB_FETCH_REL and ODB_FETCH_BOOKMARK.
+The default value for <i>fetch_type</i> is ODB_FETCH_FORWARD, and the default for
+<i>fetch_param</i> is 0. The function returns FALSE if there are no more rows or it fails.
+</small><br>&nbsp;<br>
+<a name="fetch_array"><b>odbtp_fetch_array</b></a><p>
+<small>odbtp_fetch_array -- fetch row as an array</small><p>
+Description<p>
+<small>array odbtp_fetch_array(resource odbtp_query[, long fetch_type[, long fetch_param]])<p>
+Fetches a row from the current resutl set associated with <i>odbtp_query</i>, and returns it
+as an array.  The function returns FALSE if there are no more rows or it fails. See
+<a href="#fetch">odbtp_fetch</a> for details about the optional parameters
+<i>fetch_type</i> and <i>fetch_param</i>.<p>
+odbtp_fetch_array is an extended version of <a href="#fetch_row">odbtp_fetch_row</a>. In addition
+to storing the data in the numeric indices of the result array, it also stores the data
+in associative indices, using the field names as keys.
+</small><br>&nbsp;<br>
+<a name="fetch_assoc"><b>odbtp_fetch_assoc</b></a><p>
+<small>odbtp_fetch_assoc -- fetch row as an associative array</small><p>
+Description<p>
+<small>array odbtp_fetch_assoc(resource odbtp_query[, long fetch_type[, long fetch_param]])<p>
+Fetches a row from the current resutl set associated with <i>odbtp_query</i>, and returns it
+as an associative array.  The function returns FALSE if there are no more rows or it fails. See
+<a href="#fetch">odbtp_fetch</a> for details about the optional parameters
+<i>fetch_type</i> and <i>fetch_param</i>.<p>
+odbtp_fetch_assoc fetches one row of data from the result set
+into an associative array.  The data field names are used as the
+keys for the array.
+</small><br>&nbsp;<br>
+<a name="fetch_batch"><b>odbtp_fetch_batch</b></a><p>
+<small>odbtp_fetch_batch -- fetch next batch of rows</small><p>
+Description<p>
+<small>long odbtp_fetch_batch(resource odbtp_query)<p>
+Fetches the next batch of rows from the current result set
+associated with <i>odbtp_query</i> into the row cache. This function is only
+necessary if row caching has been enabled with
+<a href="#use_row_cache">odbtp_use_row_cache</a> and the total
+number of rows in the result set is larger than the row cache size.
+If successful, the function will return the number of
+rows fetched into the cache, otherwise it returns FALSE.
+</small><br>&nbsp;<br>
+<a name="fetch_field"><b>odbtp_fetch_field</b></a><p>
+<small>odbtp_fetch_field -- get field information</small><p>
+Description<p>
+<small>object odbtp_fetch_field(resource odbtp_query[, mixed field_id])<p>
+Returns an object containing field information.<p>
+odbtp_fetch_field can be used in order to obtain information
+about fields in a certain query result. If the <i>field_id</i> isn't
+specified, the next field that wasn't yet retrieved by odbtp_fetch_field
+is retrieved.<p>
+The properties of the object are:
+<ul>
+<li>name - field name.
+<li>table - the table from which the field was taken.
+<li>schema - the schema (owner) of the field.
+<li>catalog - the catalog (database) of the field.
+<li>max_length - maximum display length of the field.
+<li>numeric - 1 if the field is numeric
+<li>type - the field's type name.
+<li>bindtype - the field's <a href="#datatypes">ODB data type</a> binding.
+<li>basename - the field's actual name if aliased.
+<li>not_null - 1 if not nullable.
+<li>unsigned - 1 if unsigned data type.
+<li>auto_increment - 1 if auto increment (identity).
+<li>primary_key - 1 if primary key
+<li>hidden - 1 if hidden.
+</ul>
+The parameter <i>field_id</i> can either be the name or 0-based number
+of the field.  See also <a href="#field_seek">odbtp_field_seek</a>.
+</small><br>&nbsp;<br>
+<a name="fetch_object"><b>odbtp_fetch_object</b></a><p>
+<small>odbtp_fetch_object -- fetch row as an object</small><p>
+Description<p>
+<small>object odbtp_fetch_object(resource odbtp_query[, long fetch_type[, long fetch_param]])<p>
+Fetches a row from the current resutl set associated with <i>odbtp_query</i>, and returns it
+as an object.  The function returns FALSE if there are no more rows or it fails. See
+<a href="#fetch">odbtp_fetch</a> for details about the optional parameters
+<i>fetch_type</i> and <i>fetch_param</i>.<p>
+odbtp_fetch_object is similar to <a href="#fetch_array">odbtp_fetch_array</a>,
+with one difference - an object is returned, instead of an array.
+Indirectly, that means that you can only access the data by the field names,
+and not by their offsets (numbers are illegal property names).
+</small><br>&nbsp;<br>
+<a name="fetch_output"><b>odbtp_fetch_output</b></a><p>
+<small>odbtp_fetch_output -- fetch output parameters as an array</small><p>
+Description<p>
+<small>array odbtp_fetch_output(resource odbtp_query)<p>
+Fetches output parameter data resulting from the execution of a
+prepared query for <i>odbtp_query</i>.  The data is returned as an
+array whose keys correspond to the output parameter numbers.  The return
+value is FALSE if the function fails.
+Output parameter data is usually not available until all query results have
+been fetched.
+</small><br>&nbsp;<br>
+<a name="fetch_row"><b>odbtp_fetch_row</b></a><p>
+<small>odbtp_fetch_row -- fetch row as an enumerated array</small><p>
+Description<p>
+<small>array odbtp_fetch_row(resource odbtp_query[, long fetch_type[, long fetch_param]])<p>
+Fetches a row from the current resutl set associated with <i>odbtp_query</i>, and returns it
+as an enumerated array.  The function returns FALSE if there are no more rows or it fails. See
+<a href="#fetch">odbtp_fetch</a> for details about the optional parameters
+<i>fetch_type</i> and <i>fetch_param</i>.<p>
+odbtp_fetch_row fetches one row of data from the result set.
+Each result field is stored in an array offset, starting at offset 0.
+</small><br>&nbsp;<br>
+<a name="field"><b>odbtp_field</b></a><p>
+<small>odbtp_field -- get/set current field value</small><p>
+Description<p>
+<small>mixed odbtp_field(resource odbtp_query, mixed field_id[, mixed new_value])<p>
+If <i>new_value</i> is not specified, then the data value associated with
+the <i>odbtp_query</i> result field <i>field_id</i> will be returned. Otherwise,
+the field will be set to <i>new_value</i> and returns TRUE if it succeeds.  If the
+function fails for either case, FALSE will be returned.
+The parameter <i>field_id</i> can either be the name or 0-based number of the field.<p>
+odbtp_fetch is used to obtain data from a row that was fetched with
+<a href="#fetch">odbtp_fetch</a>.  It can also be used to set the field
+values for a row that will be updated with <a href="#row_update">odbtp_row_update</a>
+or added with <a href="#row_add">odbtp_row_add</a>.
+</small><br>&nbsp;<br>
+<a name="field_basename"><b>odbtp_field_basename</b></a><p>
+<small>odbtp_field_basename -- get field base name</small><p>
+Description<p>
+<small>string odbtp_field_basename(resource odbtp_query, mixed field_id)<p>
+Returns the base (actual) name of the <i>odbtp_query</i> result field <i>field_id</i>.
+The parameter <i>field_id</i> is either the name or 0-based number of the field.
+The function returns FALSE if it fails.
+</small><br>&nbsp;<br>
+<a name="field_bindtype"><b>odbtp_field_bindtype</b></a><p>
+<small>odbtp_field_bindtype -- get field bind type</small><p>
+Description<p>
+<small>long odbtp_field_bindtype(resource odbtp_query, mixed field_id)<p>
+Returns the <a href="#datatypes">ODB data type</a> bound to the <i>odbtp_query</i> result field <i>field_id</i>.
+The parameter <i>field_id</i> can either be the name or 0-based number of the field.
+The function returns FALSE if it fails.
+</small><br>&nbsp;<br>
+<a name="field_catalog"><b>odbtp_field_catalog</b></a><p>
+<small>odbtp_field_catalog -- get field catalog</small><p>
+Description<p>
+<small>string odbtp_field_catalog(resource odbtp_query, mixed field_id)<p>
+Returns the catalog (database) of the <i>odbtp_query</i> result field <i>field_id</i>.
+The parameter <i>field_id</i> is either the name or 0-based number of the field.
+The function returns FALSE if it fails.
+</small><br>&nbsp;<br>
+<a name="field_flags"><b>odbtp_field_flags</b></a><p>
+<small>odbtp_field_flags -- get field flags</small><p>
+Description<p>
+<small>string odbtp_field_flags(resource odbtp_query, mixed field_id)<p>
+Returns the flag settings of the <i>odbtp_query</i> result field <i>field_id</i>.
+The value is returned as a string containing one or more of the following substrings:<p>
+&nbsp;&nbsp;&nbsp;not_null<br>
+&nbsp;&nbsp;&nbsp;unsigned<br>
+&nbsp;&nbsp;&nbsp;auto_increment<br>
+&nbsp;&nbsp;&nbsp;numeric<br>
+&nbsp;&nbsp;&nbsp;blob<br>
+&nbsp;&nbsp;&nbsp;primary_key<br>
+&nbsp;&nbsp;&nbsp;hidden<p>
+The parameter <i>field_id</i> is either the name or 0-based number of the field.
+The function returns FALSE if it fails.
+</small><br>&nbsp;<br>
+<a name="field_ignore"><b>odbtp_field_ignore</b></a><p>
+<small>odbtp_field_ignore -- ignore field</small><p>
+Description<p>
+<small>bool odbtp_field_ignore(resource odbtp_query, mixed field_id)<p>
+Specifies that the <i>odbtp_query</i> result field <i>field_id</i> should
+be ignored when executing <a href="#row_update">odbtp_row_update</a> or
+<a href="#row_add">odbtp_row_add</a>. The function returns FALSE if it fails.
+The parameter <i>field_id</i> can either be the name or 0-based number of the field.
+</small><br>&nbsp;<br>
+<a name="field_length"><b>odbtp_field_length</b></a><p>
+<small>odbtp_field_length -- get field max char length</small><p>
+Description<p>
+<small>long odbtp_field_length(resource odbtp_query, mixed field_id)<p>
+Returns the maximum character display length of the <i>odbtp_query</i> result field <i>field_id</i>.
+The parameter <i>field_id</i> can either be the name or 0-based number of the field.
+The function returns FALSE if it fails.
+</small><br>&nbsp;<br>
+<a name="field_name"><b>odbtp_field_name</b></a><p>
+<small>odbtp_field_name -- get field name</small><p>
+Description<p>
+<small>string odbtp_field_name(resource odbtp_query, mixed field_id)<p>
+Returns the name of the <i>odbtp_query</i> result field <i>field_id</i>.
+The parameter <i>field_id</i> is the 0-based number of the field.
+The function returns FALSE if it fails.
+</small><br>&nbsp;<br>
+<a name="field_schema"><b>odbtp_field_schema</b></a><p>
+<small>odbtp_field_schema -- get field schema</small><p>
+Description<p>
+<small>string odbtp_field_schema(resource odbtp_query, mixed field_id)<p>
+Returns the schema (owner) of the <i>odbtp_query</i> result field <i>field_id</i>.
+The parameter <i>field_id</i> is either the name or 0-based number of the field.
+The function returns FALSE if it fails.
+</small><br>&nbsp;<br>
+<a name="field_seek"><b>odbtp_field_seek</b></a><p>
+<small>odbtp_field_seek -- move to specified field</small><p>
+Description<p>
+<small>bool odbtp_field_seek(resource odbtp_query, mixed field_id)<p>
+Moves to the field specified by <i>field_id</i>. If the next call to
+<a href="#fetch_field">odbtp_fetch_field</a> doesn't include a
+field specification, this field would be returned.
+The parameter <i>field_id</i> can either be the name or 0-based number
+of the field.  The function will return FALSE if it fails.
+</small><br>&nbsp;<br>
+<a name="field_table"><b>odbtp_field_table</b></a><p>
+<small>odbtp_field_table -- get field table</small><p>
+Description<p>
+<small>string odbtp_field_table(resource odbtp_query, mixed field_id)<p>
+Returns the table of the <i>odbtp_query</i> result field <i>field_id</i>.
+The parameter <i>field_id</i> is either the name or 0-based number of the field.
+The function returns FALSE if it fails.
+</small><br>&nbsp;<br>
+<a name="field_type"><b>odbtp_field_type</b></a><p>
+<small>odbtp_field_type -- get field data type</small><p>
+Description<p>
+<small>string odbtp_field_type(resource odbtp_query, mixed field_id)<p>
+Returns the data type of the <i>odbtp_query</i> result field <i>field_id</i>.
+The parameter <i>field_id</i> is either the name or 0-based number of the field.
+The function returns FALSE if it fails.
+</small><br>&nbsp;<br>
+<a name="free_query"><b>odbtp_free_query</b></a><p>
+<small>odbtp_free_query -- free query resource</small><p>
+Description<p>
+<small>void odbtp_free_query(resource odbtp_query)<p>
+Frees the <i>odbtp_query</i> that was previously allocated by
+<a href="#allocate_query">odbtp_allocate_query</a>,
+<a href="#get_query">odbtp_get_query</a>,
+<a href="#query">odbtp_query</a> or
+<a href="#prepare">odbtp_prepare</a>.
+</small><br>&nbsp;<br>
+<a name="get"><b>odbtp_get</b></a><p>
+<small>odbtp_get -- get parameter value</small><p>
+Description<p>
+<small>mixed odbtp_get(resource odbtp_query, mixed param_id)<p>
+Returns the value of the prepared query parameter <i>param_id</i> for <i>odbtp_query</i>.
+The return value is FALSE if the function fails.
+</small><br>&nbsp;<br>
+<a name="get_attr"><b>odbtp_get_attr</b></a><p>
+<small>odbtp_get_attr -- get attribute</small><p>
+Description<p>
+<small>mixed odbtp_get_attr( long attrib[, resource odbtp_connection])<p>
+Gets the current value of the <a href="#attributes">ODB attribute</a> <i>attrib</i> for <i>odbtp_connection</i>.
+The default ODBTP connection resource is used if <i>odbtp_connection</i> is not specified.
+This function returns FALSE if it fails.
+</small><br>&nbsp;<br>
+<a name="get_error"><b>odbtp_get_error</b></a><p>
+<small>odbtp_get_error -- get current error message</small><p>
+Description<p>
+<small>string odbtp_get_error(resource odbtp_handle)<p>
+Returns the error text associated with the last error that occured for <i>odbtp_handle</i>.
+The parameter <i>odbtp_handle</i> is either an ODBTP connection or query resource.
+</small><br>&nbsp;<br>
+<a name="get_message"><b>odbtp_get_message</b></a><p>
+<small>odbtp_get_message -- get current message</small><p>
+Description<p>
+<small>string odbtp_get_message(resource odbtp_handle)<p>
+Returns any message text that was returned by the server for <i>odbtp_handle</i>.
+The parameter <i>odbtp_handle</i> is either an ODBTP connection or query resource.
+</small><br>&nbsp;<br>
+<a name="get_query"><b>odbtp_get_query</b></a><p>
+<small>odbtp_get_query -- get query</small><p>
+Description<p>
+<small>resource odbtp_get_query([resource odbtp_connection[, long query_id]])<p>
+Returns the ODBTP query resource corresponding to <i>query_id</i> for <i>odbtp_connection</i>.
+This function returns FALSE if it fails.
+The default ODBTP connectinn resource will be used if <i>odbtp_connection</i>
+is not specified.  The default for <i>query_id</i> is 0.<p>
+odbtp_get_query is normally used to restrieve an ODBTP query resource that is being maintained by the
+server for a reserved connection. It is normally called after reestablishing a
+reserved connection with <a href="#rconnect">odbtp_rconnect</a>.
+See also <a href="#query_id">odbtp_query_id</a>.<p>
+If <i>odbtp_connection</i> was not used in a prior call to
+<a href="#allocate_query">odbtp_allocate_query</a>,
+odbtp_get_query,
+<a href="#query">odbtp_query</a> or
+<a href="#prepare">odbtp_prepare</a>,
+then the returned resource
+will be the primary ODBTP query resource for <i>odbtp_connection</i>.
+The primary ODBTP query resource is used when calls to
+<a href="#query">odbtp_query</a> or <a href="#prepare">odbtp_prepare</a>
+are made with an ODBTP connection resource.
+</small><br>&nbsp;<br>
+<a name="guid_string"><b>odbtp_guid_string</b></a><p>
+<small>odbtp_guid_string -- converts a GUID to its character string equivalent</small><p>
+Description<p>
+<small>string odbtp_guid_string(mixed guid [,bool short_format])<p>
+Converts the GUID object or binary string <i>guid</i> into its character
+equivalent.  The short character format will be returned if
+<i>short_format</i> is TRUE.  The default for <i>short_format</i>
+is FALSE. A GUID object has the following structure:
+<pre>class guid
+{
+    var $data1; // 4-byte integer
+    var $data2; // 2-byte integer
+    var $data3; // 2-byte integer
+    var $data4; // 8-byte binary string
+}</pre>
+</small><br>&nbsp;<br>
+<a name="inout"><b>odbtp_inout</b></a><p>
+<small>odbtp_inout -- define parameter as input/output</small><p>
+Description<p>
+<small>bool odbtp_inout(resource odbtp_query, mixed param_id[, long data_type[, long length[, mixed sql_type[, long size[, long precision]]]]])<p>
+Defines parameter <i>param_id</i> of a query prepared for <i>odbtp_query</i> as an inout parameter, and
+binds it to the <a href="#datatypes">ODB data type</a> <i>data_type</i>.  The parameter's default <a href="#datatypes">ODB data type</a> will be used
+if <i>data_type</i> is not specified.
+If <i>length</i> is specified, then it will be used as the maximum size for the bound data buffer, otherwise the
+server will try to determine it via the ODBC driver.  If <i>data_type</i> is a fixed length <a href="#datatypes">ODB data type</a>, the <i>length</i> is ignored.
+<p>
+The parameters <i>sql_type</i>, <i>size</i> and <i>precision</i> are only
+required if the ODBTP service did not or was unable to describe the parameter.
+<i>sql_type</i> specifies a type name that was previously loaded with
+<a href="#load_data_types">odbtp_load_data_types</a><p>
+This function will return FALSE if it fails.
+</small><br>&nbsp;<br>
+<a name="input"><b>odbtp_input</b></a><p>
+<small>odbtp_input -- define parameter as input</small><p>
+Description<p>
+<small>bool odbtp_input(resource odbtp_query, mixed param_id[, long data_type[, long length[, mixed sql_type[, long size[, long precision]]]]])<p>
+Defines parameter <i>param_id</i> of a query prepared for <i>odbtp_query</i> as an input parameter, and
+binds it to the <a href="#datatypes">ODB data type</a> <i>data_type</i>.  The parameter's default <a href="#datatypes">ODB data type</a> will be used
+if <i>data_type</i> is not specified.
+If <i>length</i> is specified, then it will be used as the maximum size for the bound data buffer, otherwise the
+server will try to determine it via the ODBC driver.  If <i>data_type</i> is a fixed length <a href="#datatypes">ODB data type</a>, the <i>length</i> is ignored.
+<p>
+The parameters <i>sql_type</i>, <i>size</i> and <i>precision</i> are only
+required if the ODBTP service did not or was unable to describe the parameter.
+<i>sql_type</i> specifies a type name that was previously loaded with
+<a href="#load_data_types">odbtp_load_data_types</a><p>
+This function will return FALSE if it fails.
+</small><br>&nbsp;<br>
+<a name="is_detached"><b>odbtp_is_detached</b></a><p>
+<small>odbtp_is_detached -- determine if query is detached</small><p>
+Description<p>
+<small>bool odbtp_is_detached(resource odbtp_query)<p>
+Determines if the <i>odbtp_query</i> resource is detached from the underlying
+connection.  When a query resouce is detached, its result set is retained
+even if another query is executed with the same connection, or if the
+connection is closed. The function returns TRUE if the specified query
+resource is detached. See <a href="#detach">odbtp_detach</a> for
+details about detaching a query.
+</small><br>&nbsp;<br>
+<a name="last_error"><b>odbtp_last_error</b></a><p>
+<small>odbtp_last_error -- get the last error message</small><p>
+Description<p>
+<small>string odbtp_last_error([resource odbtp_connection])<p>
+Gets the the text of the last error that occurred for <i>odbtp_connection</i>.
+If <i>odbtp_connection</i> is not specified, then the text of
+the last odbtp function call error is returned.
+</small><br>&nbsp;<br>
+<a name="last_error_code"><b>odbtp_last_error_code</b></a><p>
+<small>odbtp_last_error_code -- get the last error code</small><p>
+Description<p>
+<small>long odbtp_last_error_code([resource odbtp_connection])<p>
+Gets the the code of the last error that occurred for <i>odbtp_connection</i>.
+If <i>odbtp_connection</i> is not specified, then the code of
+the last odbtp function call error is returned.
+</small><br>&nbsp;<br>
+<a name="last_error_state"><b>odbtp_last_error_state</b></a><p>
+<small>odbtp_last_error_state -- get the last error state</small><p>
+Description<p>
+<small>string odbtp_last_error_state([resource odbtp_connection])<p>
+Gets the the state of the last error that occurred for <i>odbtp_connection</i>.
+If <i>odbtp_connection</i> is not specified, then the state of
+the last odbtp function call error is returned.
+</small><br>&nbsp;<br>
+<a name="load_data_types"><b>odbtp_load_data_types</b></a><p>
+<small>odbtp_load_data_types -- load data type information</small><p>
+Description<p>
+<small>bool odbtp_load_data_types([resource odbtp_connection])<p>
+Loads data type information for use by functions
+<a href="#input">odbtp_input</a>,
+<a href="#inout">odbtp_inout</a>,
+<a href="#output">odbtp_output</a>,
+<a href="#field_type">odbtp_field_type</a>, and
+<a href="#param_type">odbtp_param_type</a>.
+If <i>odbtp_connection</i> is not specified, then the default
+ODBTP connection resource will be used.
+The return value is FALSE if the function fails.
+</small><br>&nbsp;<br>
+<a name="new_datetime"><b>odbtp_new_datetime</b></a><p>
+<small>odbtp_new_datetime -- create a new datetime object</small><p>
+Description<p>
+<small>object odbtp_new_datetime()<p>
+Returns a new instance of a datetime object. A datetime object is used
+to represent data whose <a href="#datatypes">ODB data type</a> is ODB_DATETIME.
+The datetime object has the following structure:
+<pre>class datetime
+{
+    var $year;
+    var $month;
+    var $day;
+    var $hour;
+    var $minute;
+    var $second;
+    var $fraction;
+}</pre>
+</small><br>&nbsp;<br>
+<a name="next_result"><b>odbtp_next_result</b></a><p>
+<small>odbtp_next_result -- get next query result</small><p>
+Description<p>
+<small>bool odbtp_next_result(resource odbtp_query)<p>
+Gets the next result for a query executed with <i>odbtp_query</i>.
+This function returns FALSE if there are no more results or it fails.
+See also <a href="#query">odbtp_query</a> or <a href="#execute">odbtp_execute</a>.
+</small><br>&nbsp;<br>
+<a name="num_fields"><b>odbtp_num_fields</b></a><p>
+<small>odbtp_num_fields -- get number of fields in query result</small><p>
+Description<p>
+<small>long odbtp_num_fields(resource odbtp_query)<p>
+Returns the number of fields in the current result set associated with <i>odbtp_query</i>.  The
+function will return FALSE if it fails.
+</small><br>&nbsp;<br>
+<a name="num_params"><b>odbtp_num_params</b></a><p>
+<small>odbtp_num_params -- get number of prepared parameters</small><p>
+Description<p>
+<small>long odbtp_num_params(resource odbtp_query)<p>
+Returns the number of parameters in a query prepared for <i>odbtp_query</i>.  The
+function will return FALSE if it fails. See also <a href="#prepare">odbtp_prepare</a>.
+</small><br>&nbsp;<br>
+<a name="num_rows"><b>odbtp_num_rows</b></a><p>
+<small>odbtp_num_rows -- get number of fetched rows from query</small><p>
+Description<p>
+<small>long odbtp_num_rows(resource odbtp_query)<p>
+Returns the number of rows fetched from the current result set
+associated with <i>odbtp_query</i>. If row caching has been enabled with
+<a href="#use_row_cache">odbtp_use_row_cache</a>, then the total
+number of rows in the cache will be returned.
+</small><br>&nbsp;<br>
+<a name="output"><b>odbtp_output</b></a><p>
+<small>odbtp_output -- define parameter as output</small><p>
+Description<p>
+<small>bool odbtp_output(resource odbtp_query, mixed param_id[, long data_type[, long length[, mixed sql_type[, long size[, long precision]]]]])<p>
+Defines parameter <i>param_id</i> of a query prepared for <i>odbtp_query</i> as an outout parameter, and
+binds it to the <a href="#datatypes">ODB data type</a> <i>data_type</i>.  The parameter's default <a href="#datatypes">ODB data type</a> will be used
+if <i>data_type</i> is not specified.
+If <i>length</i> is specified, then it will be used as the maximum size for the bound data buffer, otherwise the
+server will try to determine it via the ODBC driver.  If <i>data_type</i> is a fixed length <a href="#datatypes">ODB data type</a>, the <i>length</i> is ignored.
+<p>
+The parameters <i>sql_type</i>, <i>size</i> and <i>precision</i> are only
+required if the ODBTP service did not or was unable to describe the parameter.
+<i>sql_type</i> specifies a type name that was previously loaded with
+<a href="#load_data_types">odbtp_load_data_types</a><p>
+This function will return FALSE if it fails.
+</small><br>&nbsp;<br>
+<a name="param_bindtype"><b>odbtp_param_bindtype</b></a><p>
+<small>odbtp_param_bindtype -- get parameter bind type</small><p>
+Description<p>
+<small>long odbtp_param_bindtype(resource odbtp_query, mixed param_id)<p>
+Returns the <a href="#datatypes">ODB data type</a> bound to the <i>odbtp_query</i> prepared parameter <i>param_id</i>.
+The parameter <i>param_id</i> can either be the name or 1-based number of the prepared parameter.
+The function returns FALSE if it fails.
+</small><br>&nbsp;<br>
+<a name="param_length"><b>odbtp_param_length</b></a><p>
+<small>odbtp_param_length -- get parameter max char length</small><p>
+Description<p>
+<small>long odbtp_param_length(resource odbtp_query, mixed param_id)<p>
+Returns the maximum character display length of the <i>odbtp_query</i> prepared parameter <i>param_id</i>.
+The parameter <i>param_id</i> can either be the name or 1-based number of the prepared parameter.
+The function returns FALSE if it fails.
+</small><br>&nbsp;<br>
+<a name="param_name"><b>odbtp_param_name</b></a><p>
+<small>odbtp_param_name -- get parameter name</small><p>
+Description<p>
+<small>string odbtp_param_name(resource odbtp_query, mixed param_id)<p>
+Returns the name of the <i>odbtp_query</i> prepared parameter <i>param_id</i>.
+The parameter <i>param_id</i> is the 1-based number of the prepared parameter.
+The function returns FALSE if it fails.
+</small><br>&nbsp;<br>
+<a name="param_number"><b>odbtp_param_number</b></a><p>
+<small>odbtp_param_number -- get parameter number</small><p>
+Description<p>
+<small>long odbtp_param_number(resource odbtp_query, mixed param_id)<p>
+Returns the 1-based number of the <i>odbtp_query</i> prepared parameter <i>param_id</i>.
+The parameter <i>param_id</i> is the name of the prepared parameter.
+The function returns FALSE if it fails.
+</small><br>&nbsp;<br>
+<a name="param_type"><b>odbtp_param_type</b></a><p>
+<small>odbtp_param_type -- get parameter data type</small><p>
+Description<p>
+<small>string odbtp_param_type(resource odbtp_query, mixed param_id)<p>
+Returns the data type of the <i>odbtp_query</i> prepared parameter <i>param_id</i>.
+Thed parameter <i>param_id</i> can either be the name or 1-based number of the prepared parameter.
+The function returns FALSE if it fails.
+</small><br>&nbsp;<br>
+<a name="prepare"><b>odbtp_prepare</b></a><p>
+<small>odbtp_prepare -- prepare a query for execution</small><p>
+Description<p>
+<small>resource odbtp_prepare( string query[, resource odbtp_handle])<p>
+Prepares the <i>query</i> for <i>odbtp_handle</i>, and returns an ODBTP
+query resource that can be used to execute the <i>query</i> with <a href="#execute">odbtp_execute</a>.
+The function will return FALSE if it fails.<p>
+The parameter <i>odbtp_handle</i> is either an ODBTP connection or query resource.
+If it is an ODBTP query resource, then the function will return the same resource.
+In this case it is not necessary to store the returned resource in another
+variable, and only a test for failure is required.
+If <i>odbtp_handle</i> is an ODBTP connection resource, then its primary
+ODBTP query resource will be used and returned by the function.  The
+function will allocate a primary ODBTP query resource for <i>odbtp_handle</i>
+if one has not been allocated.
+</small><br>&nbsp;<br>
+<a name="prepare_proc"><b>odbtp_prepare_proc</b></a><p>
+<small>odbtp_prepare_proc -- prepare a procedure for execution</small><p>
+Description<p>
+<small>resource odbtp_prepare_proc( string procedure[, resource odbtp_handle])<p>
+Prepares the specified <i>procedure</i> for <i>odbtp_handle</i>, and returns an ODBTP
+query resource that can be used to execute the <i>procedure</i> with <a href="#execute">odbtp_execute</a>.
+The function will return FALSE if it fails.<p>
+The parameter <i>odbtp_handle</i> is either an ODBTP connection or query resource.
+If it is an ODBTP query resource, then the function will return the same resource.
+In this case it is not necessary to store the returned resource in another
+variable, and only a test for failure is required.
+If <i>odbtp_handle</i> is an ODBTP connection resource, then its primary
+ODBTP query resource will be used and returned by the function.  The
+function will allocate a primary ODBTP query resource for <i>odbtp_handle</i>
+if one has not been allocated.<p>
+After preparing the procedure,
+<a href="#set">odbtp_set</a> and <a href="#get">odbtp_get</a> can be used
+to set and retrieve specific procedure parameter data.
+<a href="#attach_param">odbtp_attach_param</a> can also be used for this
+purpose.
+</small><br>&nbsp;<br>
+<a name="query"><b>odbtp_query</b></a><p>
+<small>odbtp_query -- execute query</small><p>
+Description<p>
+<small>resource odbtp_query( string query[, resource odbtp_handle])<p>
+Executes the <i>query</i> for <i>odbtp_handle</i>, and returns an ODBTP
+query resource that can be used to obtain the results.
+The function will return FALSE if it fails.<p>
+The parameter <i>odbtp_handle</i> is either an ODBTP connection or query resource.
+If it is an ODBTP query resource, then the function will return the same resource.
+In this case it is not necessary to store the returned resource in another
+variable, and only a test for failure is required.
+If <i>odbtp_handle</i> is an ODBTP connection resource, then its primary
+ODBTP query resource will be used and returned by the function.  The
+function will allocate a primary ODBTP query resource for <i>odbtp_handle</i>
+if one has not been allocated.
+</small><br>&nbsp;<br>
+<a name="query_id"><b>odbtp_query_id</b></a><p>
+<small>odbtp_query_id -- get query id</small><p>
+Description<p>
+<small>long odbtp_query_id(resource odbtp_query)<p>
+Returns the query ID for <i>odbtp_query</i>, or FALSE if it fails.<p>
+The query ID is used to identify an ODBTP query resource associated
+with an ODBTP connection resource. When using a reserved connection, this
+value can be used to restore the "pre-close" state of a query with
+<a href="#get_query">odbtp_get_query</a>.  This is typicall done after
+reestablishing a reserved connection with <a href="#rconnect">odbtp_rconnect</a>.
+</small><br>&nbsp;<br>
+<a name="rconnect"><b>odbtp_rconnect</b></a><p>
+<small>odbtp_rconnect -- reserved connect to ODBTP service</small><p>
+Description<p>
+<small>resource odbtp_rconnect(string host, string dbconnect)<p>
+Establishes or reestablishes a database connection via an ODBTP server, and
+returns the corresponding ODBTP connection resource or FALSE if it fails.<p>
+odbtp_rconnect establishes a connection in the same manner as <a href="#connect">odbtp_connect</a>.
+The only difference is that the server-side database connection is reserved, and assigned
+a unique connection ID that can be used to reestablish an ODBTP connection with
+the same database connection after calling <a href="#close">odbtp_close</a>.
+The states of any open queries are also maintained by the server.
+This allows the same database connection to be used across web pages,<p>
+The following steps should be used to reestablish a reserved connection:
+<ol>
+<li>Call <a href="#connect_id">odbtp_connect_id</a> to obtain the connection ID.
+<li>Call <a href="#query_id">odbtp_query_id</a> to obtain the query ID for each ODBTP query resource that will need to be restored.
+<li>Save the connection and query IDs in session variables or pass them to other pages with CGI parameters.
+<li>Close the connection with <a href="#close">odbtp_close</a>.
+<li>Reestablish the connection with odbtp_rconnect by using the connection ID for <i>dbconnect</i>.
+<li>Restore the ODBTP query resources by calling <a href="#get_query">odbtp_get_query</a> for each query ID.
+</ol>
+If it is no longer necessary for the server to maintain the reserved database
+connection, then set the <i>disconnect_db</i> parameter of <a href="#close">odbtp_close</a>
+to TRUE when closing the connection.
+</small><br>&nbsp;<br>
+<a name="result"><b>odbtp_result</b></a><p>
+<small>odbtp_result -- get result data</small><p>
+Description<p>
+<small>mixed odbtp_result(resource odbtp_query, long row, mixed field_id)<p>
+Retrieves the data stored in the result set cell identified by <i>row</i>
+and <i>field_id</i>. The value for row is 0-based, and <i>field_id</i>
+can either be the name or 0-based number of the field.  This
+function will only work if row caching has been enabled with
+<a href="#use_row_cache">odbtp_use_row_cache</a>,
+</small><br>&nbsp;<br>
+<a name="rollback"><b>odbtp_rollback</b></a><p>
+<small>odbtp_rollback -- rollback current transaction</small><p>
+Description<p>
+<small>bool odbtp_rollback([resource odbtp_connection])<p>
+Rollbacks the database transactions since the last commit or rollback. If <i>odbtp_connection</i>
+is not specified, then the default ODBTP connection resource will be used.  This function is only applicable
+if the <a href="#attributes">ODB attribute</a> ODB_ATTR_TRANSACTIONS is not set to ODB_TXN_NONE.  The
+return value is FALSE if the function fails.
+</small><br>&nbsp;<br>
+<a name="row_add"><b>odbtp_row_add</b></a><p>
+<small>odbtp_row_add -- add row</small><p>
+Description<p>
+<small>bool odbtp_row_add(resource odbtp_query)<p>
+Adds a new row to the result set for <i>odbtp_query</i>. The return value
+is FALSE if the function fails.<p>
+odbtp_row_add is only applicable if a keyset or dynamic cursor was
+enabled with <a href="#set_cursor">odbtp_set_cursor</a> prior to
+eecuting a query that generates a result set.
+Use <a href="#field">odbtp_field</a> to set the field values of the row
+before it is added.
+</small><br>&nbsp;<br>
+<a name="row_bookmark"><b>odbtp_row_bookmark</b></a><p>
+<small>odbtp_row_bookmark -- bookmark row</small><p>
+Description<p>
+<small>bool odbtp_row_bookmark(resource odbtp_query)<p>
+Bookmarks the current row fetched from the result set for <i>odbtp_query</i>. The return value
+is FALSE if the function fails.<p>
+odbtp_row_bookmark is only applicable if bookmark support was enabled when a static, keyset or dynamic cursor was
+enabled with <a href="#set_cursor">odbtp_set_cursor</a> prior to
+eecuting a query that generates a result set. This function bookmarks
+the row that will be used when performing a bookmark fetch
+with
+<a href="#fetch">odbtp_fetch</a>,
+<a href="#fetch_row">odbtp_fetch_row</a>,
+<a href="#fetch_array">odbtp_fetch_array</a> or
+<a href="#fetch_object">odbtp_fetch_object</a>.
+</small><br>&nbsp;<br>
+<a name="row_cache_size"><b>odbtp_row_cache_size</b></a><p>
+<small>odbtp_row_cache_size -- get row cache size</small><p>
+Description<p>
+<small>long odbtp_row_cache_size([resource odbtp_connection])<p>
+Returns the size of the row cache to use for query results generated with
+<i>odbtp_connection</i>. If <i>odbtp_connection</i> is not
+specified, then the default ODBTP connection resource is used.
+The return value is -1, if row caching has not been enabled.
+</small><br>&nbsp;<br>
+<a name="row_delete"><b>odbtp_row_delete</b></a><p>
+<small>odbtp_row_delete -- delete row</small><p>
+Description<p>
+<small>bool odbtp_row_delete(resource odbtp_query)<p>
+Deletes the current row fetched from the result set for <i>odbtp_query</i>. The return value
+is FALSE if the function fails.<p>
+odbtp_row_delete is only applicable if a keyset or dynamic cursor was
+enabled with <a href="#set_cursor">odbtp_set_cursor</a> prior to
+eecuting a query that generates a result set.
+</small><br>&nbsp;<br>
+<a name="row_lock"><b>odbtp_row_lock</b></a><p>
+<small>odbtp_row_lock -- lock row</small><p>
+Description<p>
+<small>bool odbtp_row_lock(resource odbtp_query)<p>
+Locks the current row fetched from the result set for <i>odbtp_query</i>. The return value
+is FALSE if the function fails.<p>
+odbtp_row_lock is only applicable if a keyset or dynamic cursor was
+enabled with <a href="#set_cursor">odbtp_set_cursor</a> prior to
+eecuting a query that generates a result set.
+Call <a href="#unlock">odbtp_row_unlock</a> to unlock the row.
+</small><br>&nbsp;<br>
+<a name="row_refresh"><b>odbtp_row_refresh</b></a><p>
+<small>odbtp_row_refresh -- refresh row</small><p>
+Description<p>
+<small>bool odbtp_row_refresh(resource odbtp_query)<p>
+Refreshes the current row fetched from the result set for <i>odbtp_query</i>. The return value
+is FALSE if the function fails.<p>
+odbtp_row_refresh is applicable only if a keyset or dynamic cursor was
+enabled with <a href="#set_cursor">odbtp_set_cursor</a> prior to
+eecuting a query that generates a result set.
+It is used to restore the row's field values to their original values if
+they were changed with <a href="#field">odbtp_field</a>.
+</small><br>&nbsp;<br>
+<a name="row_status"><b>odbtp_row_status</b></a><p>
+<small>odbtp_row_status -- get row status</small><p>
+Description<p>
+<small>long odbtp_row_status(resource odbtp_query)<p>
+Returns the <a href="#rowstatus">ODB row status</a> of the current row fetched from the result set for <i>odbtp_query</i>. The return value
+is FALSE if the function fails.<p>
+odbtp_row_status is only applicable if a keyset or dynamic cursor was
+enabled with <a href="#set_cursor">odbtp_set_cursor</a> prior to
+eecuting a query that generates a result set.
+</small><br>&nbsp;<br>
+<a name="row_unlock"><b>odbtp_row_unlock</b></a><p>
+<small>odbtp_row_unlock -- unlock row</small><p>
+Description<p>
+<small>bool odbtp_row_unlock(resource odbtp_query)<p>
+Unlocks the current row fetched from the result set for <i>odbtp_query</i>. The return value
+is FALSE if the function fails.<p>
+odbtp_row_unlock is only applicable if a keyset or dynamic cursor was
+enabled with <a href="#set_cursor">odbtp_set_cursor</a> prior to
+eecuting a query that generates a result set.
+This function is used to unlock a row that was locked with <a href="#lock">odbtp_row_lock</a>.
+</small><br>&nbsp;<br>
+<a name="row_update"><b>odbtp_row_update</b></a><p>
+<small>odbtp_row_update -- update row</small><p>
+Description<p>
+<small>bool odbtp_row_update(resource odbtp_query)<p>
+Updates the current row fetched from the result set for <i>odbtp_query</i>. The return value
+is FALSE if the function fails.<p>
+odbtp_row_update is only applicable if a keyset or dynamic cursor was
+enabled with <a href="#set_cursor">odbtp_set_cursor</a> prior to
+eecuting a query that generates a result set.
+Use <a href="#field">odbtp_field</a> to set the field values of the row
+before it is updated.
+</small><br>&nbsp;<br>
+<a name="sconnect"><b>odbtp_sconnect</b></a><p>
+<small>odbtp_sconnect -- single process connect to ODBTP service</small><p>
+Description<p>
+<small>resource odbtp_sconnect(string host, string dbconnect)<p>
+resource odbtp_sconnect(string interface[, string username[, string password[, string database]]])<p>
+Establishes a database connection via an ODBTP server, and
+returns the corresponding ODBTP connection resource or FALSE if it fails.<p>
+odbtp_sconnect establishes a connection in the same manner as <a href="#connect">odbtp_connect</a>.
+The only difference is that the server-side database connection is handled
+by a separate process instead of a thread.
+The purpose of the single process connection is to provide reliable access
+for databases whose ODBC drivers are not thread safe.
+</small><br>&nbsp;<br>
+<a name="set"><b>odbtp_set</b></a><p>
+<small>odbtp_set -- set parameter value</small><p>
+Description<p>
+<small>bool odbtp_set(resource odbtp_query, mixed param_id[, mixed data])<p>
+Sets the value of the prepared query parameter <i>param_id</i> to <i>data</i> for <i>odbtp_query</i>.
+If <i>data</i> is not specified, then the default value for the prepared query parameter will be used.
+The return value is FALSE if the function fails.<p>
+odbtp_set should only be used for prepared query parameters that were defined
+with <a href="#input">odbtp_input</a> or <a href="#inout">odbtp_inout</a>.
+</small><br>&nbsp;<br>
+<a name="set_attr"><b>odbtp_set_attr</b></a><p>
+<small>odbtp_set_attr -- set attribute</small><p>
+Description<p>
+<small>bool odbtp_set_attr(long attrib, mixed value[, resource odbtp_connection])<p>
+Sets the <a href="#attributes">ODB attribute</a> <i>attrib</i> to <i>value</i> for <i>odbtp_connection</i>.
+The default ODBTP connection resource is used if <i>odbtp_connection</i> is not specified.
+This function returns FALSE if it fails.
+</small><br>&nbsp;<br>
+<a name="set_cursor"><b>odbtp_set_cursor</b></a><p>
+<small>odbtp_set_cursor -- set cursor type</small><p>
+Description<p>
+<small>bool odbtp_set_cursor(resource odbtp_query[, long type[, long concurrency[, bool enable_bookmarks]]])<p>
+Sets the <a href="#cursortypes">ODB cursor type</a> to <i>type</i> and the
+<a href="#concurtypes">ODB cursor concurrency type</a> to <i>concurrency</i>
+for <i>odbtp_query</i>. The defaults
+for <i>type</i> and <i>concurrency</i> are ODB_CURSOR_FORWARD and ODB_CONCUR_DEFAULT
+respectively.  The parameter <i>enable_bookmark</i> is used to determine whether or
+not bookmark support should be enabled. The default for this parameter is FALSE.
+The return value is FALSE if the function fails.<p>
+In order to use scrollable fetches or row-level operations, odbtp_set_cursor
+must be called prior to executing queries that generate result sets.  The
+selected cursor type will remain in effect for all queries until it is changed
+to a new type.
+</small><br>&nbsp;<br>
+<a name="type_param"><b>odbtp_type_param</b></a><p>
+<small>odbtp_type_param -- get type of parameter</small><p>
+Description<p>
+<small>long odbtp_type_param(resource odbtp_query, mixed param_id)<p>
+Returns the <a href="#paramtypes">ODB parameter type</a> of the <i>odbtp_query</i> prepared parameter <i>param_id</i>.
+Thed parameter <i>param_id</i> can either be the name or 1-based number of the prepared parameter.
+The function returns FALSE if it fails.
+</small><br>&nbsp;<br>
+<a name="use_row_cache"><b>odbtp_use_row_cache</b></a><p>
+<small>odbtp_use_row_cache -- enable row cache usage</small><p>
+Description<p>
+<small>bool odbtp_use_row_cache([resource odbtp_connection[, bool use_cache[, long size]]])<p>
+Enable row cache usage for subsequent queries
+associated with <i>odbtp_connection</i>.
+If <i>odbtp_connection</i> is not specified, then the default
+ODBTP connection resource will be used.
+Set <i>use_cache</i> to TRUE to enable row caching, or FALSE to disable it.
+If not specified, the default value for <i>use_cache</i> is TRUE.
+Set <i>size</i> to the maximum number rows allowed in the cache.
+If <i>size</i> is not specified, then all rows will be placed in the cache.
+The return value is FALSE if the function fails.<p>
+Note: It is not necessary to call this function if row caching was
+enabled vie an <a href="interface.html">interface file</a>.
+</small><br>&nbsp;<br>
+<a name="version"><b>odbtp_version</b></a><p>
+<small>odbtp_version -- get protocol version</small><p>
+Description<p>
+<small>string odbtp_version([resource odbtp_connection])<p>
+Returns the ODBTP protocol version of the connection
+identified by <i>odbtp_connection</i>. If <i>odbtp_connection</i> is not
+specified, then the default ODBTP connection resource is used.
+</small><br>&nbsp;<br>
+</body>
+</html>

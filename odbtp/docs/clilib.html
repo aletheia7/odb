@@ -1,0 +1,4815 @@
+<html>
+<head>
+<title>ODBTP Client Library</title>
+<link href="main.css" rel="stylesheet" type="text/css">
+</head>
+<body>
+<span class="PageTitle">ODBTP -- Client Library</span>
+<h3><a name="constants">PREDEFINED CONSTANTS</a></h3>
+<h3><a name="logintypes">ODB Login Types</a></h3>
+<table cellpadding="5" cellspacing="0" border="1">
+<tr><td><b>Type</b></td><td><b>Description</b></td></tr>
+<tr><td valign="top">ODB_LOGIN_NORMAL</td><td>Login using a normal database connection.  Normal connections are pooled and reusable by all clients.</td></tr>
+<tr><td valign="top">ODB_LOGIN_RESERVED</td><td>Login using a reserved database connection.  Reserved connections are pooled and reusable only by the clients that reserved them.  This connection type is typically useed by clients that may need to reuse the same database connection after disconnecting from the server.  This is usually the case for some web-based applications.</td></tr>
+<tr><td valign="top">ODB_LOGIN_SINGLE</td><td>Login using a process that handles a single database connection.  This  login type causes the server to operate in a mullt-process mode.  It should only be used for databases whose ODBC drivers are not thread safe.</td></tr>
+</table>
+<h3><a name="attributes">ODB Attributes</a></h3>
+<table cellpadding="5" cellspacing="0" border="1">
+<tr><td><b>Attribute</b></td><td><b>Type</b></td><td><b>Description</b></td></tr>
+<tr><td valign="top">ODB_ATTR_CACHEPROCS</td><td valign="top">Long</td><td>Determines if prepared procedure information should be cached. If the value is set to 0, then the cache will not be used.</td></tr>
+<tr><td valign="top">ODB_ATTR_DATABASENAME</td><td valign="top">String</td><td>Database name [read only].</td></tr>
+<tr><td valign="top">ODB_ATTR_DBMSNAME</td><td valign="top">String</td><td>DBMS name [read only].</td></tr>
+<tr><td valign="top">ODB_ATTR_DBMSVER</td><td valign="top">String</td><td>DBMS version [read only].</td></tr>
+<tr><td valign="top">ODB_ATTR_DESCRIBEPARAMS</td><td valign="top">Long</td><td>Used to determine whether or not ODBTP server should try to describe parameters after preparing a query. If the value is set to 0, the server will not try to describe the parameters.</td></tr>
+<tr><td valign="top">ODB_ATTR_DRIVER</td><td valign="top">Long</td><td>Driver type [read only].  Valid types are:<p>ODB_DRIVER_UNKNOWN<br> ODB_DRIVER_MSSQL<br> ODB_DRIVER_JET<br>ODB_DRIVER_FOXPRO<br> ODB_DRIVER_ORACLE<br> ODB_DRIVER_SYBASE<br> ODB_DRIVER_DB2<br>ODB_DRIVER_MYSQL </td></tr>
+<tr><td valign="top">ODB_ATTR_DRIVERNAME</td><td valign="top">String</td><td>Driver name [read only].</td></tr>
+<tr><td valign="top">ODB_ATTR_DRIVERODBCVER</td><td valign="top">String</td><td>Driver ODBC version [read only].</td></tr>
+<tr><td valign="top">ODB_ATTR_DRIVERVER</td><td valign="top">String</td><td>Driver version [read only].</td></tr>
+<tr><td valign="top">ODB_ATTR_DSN</td><td valign="top">String</td><td>Data source name [read only].</td></tr>
+<tr><td valign="top">ODB_ATTR_FETCHROWCOUNT</td><td valign="top">Long</td><td>Number of rows returned by the server per fetch row request.  This attribute applies only to forward-only cursors, and is used to improve performance.  Only one row per request is sent by the server for static, keyset and dynamic cursors.</td></tr>
+<tr><td valign="top">ODB_ATTR_FULLCOLINFO</td><td valign="top">Long</td><td>Used to determine whether or not full column info should be sent. If the value is set to 0, then minimal column info will be sent.</td></tr>
+<tr><td valign="top">ODB_ATTR_MAPCHARTOWCHAR</td><td valign="top">Long</td><td>Determines if character data types should be mapped to wide character. If the value is set to 0, then the mapping will not be performed.</td></tr>
+<tr><td valign="top">ODB_ATTR_OICLEVEL</td><td valign="top">Long</td><td>ODBC interface conformance level [read only]. Possible values are:<p>ODB_OIC_CORE<br>ODB_OIC_LEVEL1<br>ODB_OIC_LEVEL2</td></tr>
+<tr><td valign="top">ODB_ATTR_QUERYTIMEOUT</td><td valign="top">Long</td><td>Query execution timeout in seconds.</td></tr>
+<tr><td valign="top">ODB_ATTR_RIGHTTRIMTEXT</td><td valign="top">Long</td><td>Used to determine whether or not trailing space characters should be removed from text data during retrieval. If the value is set to 0, text data will not be trimmed by the server.</td></tr>
+<tr><td valign="top">ODB_ATTR_SERVERNAME</td><td valign="top">String</td><td>Database server name [read only].</td></tr>
+<tr><td valign="top">ODB_ATTR_TRANSACTIONS</td><td valign="top">Long</td><td>Transaction type used for queries.  Valid types are:<p>ODB_TXN_NONE<br>ODB_TXN_DEFAULT<br>ODB_TXN_READUNCOMMITTED<br>ODB_TXN_READCOMMITTED<br>ODB_TXN_REPEATABLEREAD<br>ODB_TXN_SERIALIZABLE</td></tr>
+<tr><td valign="top">ODB_ATTR_TXNCAPABLE</td><td valign="top">Long</td><td>Indicates whether or not ODBC driver supports transactions [read only]. 1 if yes, and 0 if no.</td></tr>
+<tr><td valign="top">ODB_ATTR_UNICODESQL</td><td valign="top">Long</td><td>Used to determine whether or not SQL query strings should be submitted using UTF8 encoded UNICODE characters. If the value is set to 0, then normal characters should be used.</td></tr>
+<tr><td valign="top">ODB_ATTR_USERNAME</td><td valign="top">String</td><td>Database user name [read only].</td></tr>
+<tr><td valign="top">ODB_ATTR_VARDATASIZE</td><td valign="top">Long</td><td>Maximum size of buffer for variable length data if it is not explicitly specified when binding a column or parameter.</td></tr>
+</table>
+<h3><a name="datatypes">ODB Data Types</a></h3>
+<table cellpadding="5" cellspacing="0" border="1">
+<tr><td><b>Type</b></td><td><b>SQL Type</b></td><td><b>Default Type</b></td></tr>
+<tr><td>ODB_BINARY</td><td>binary, varbinary, image</td><td>ODB_BINARY</td></tr>
+<tr><td>ODB_BIGINT</td><td>bigint</td><td>ODB_BIGINT</td></tr>
+<tr><td>ODB_UBIGINT</td><td>&nbsp;</td><td>&nbsp;</td></tr>
+<tr><td>ODB_BIT</td><td>bit</td><td>ODB_BIT</td></tr>
+<tr><td>ODB_CHAR</td><td>char, varchar, text</td><td>ODB_CHAR</td></tr>
+<tr><td>ODB_DATE</td><td>&nbsp;</td><td>&nbsp;</td></tr>
+<tr><td>ODB_DATETIME</td><td>smalldatetime, datetime</td><td>ODB_DATETIME</td></tr>
+<tr><td>ODB_DOUBLE</td><td>float</td><td>ODB_DOUBLE</td></tr>
+<tr><td>ODB_GUID</td><td>uniqueidentifier</td><td>ODB_GUID</td></tr>
+<tr><td>ODB_INT</td><td>int</td><td>ODB_INT</td></tr>
+<tr><td>ODB_UINT</td><td>&nbsp;</td><td>&nbsp;</td></tr>
+<tr><td>ODB_NUMERIC</td><td>decimal, numeric</td><td>ODB_CHAR</td></tr>
+<tr><td>ODB_REAL</td><td>real</td><td>ODB_REAL</td></tr>
+<tr><td>ODB_SMALLINT</td><td>smallint</td><td>ODB_SMALLINT</td></tr>
+<tr><td>ODB_USMALLINT</td><td>&nbsp;</td><td>&nbsp;</td></tr>
+<tr><td>ODB_TIME</td><td>&nbsp;</td><td>&nbsp;</td></tr>
+<tr><td>ODB_TINYINT</td><td>&nbsp;</td><td>&nbsp;</td></tr>
+<tr><td>ODB_UTINYINT</td><td>tinyint</td><td>ODB_UTINYINT</td></tr>
+<tr><td>ODB_WCHAR</td><td>nchar, nvarchar, ntext</td><td>ODB_WCHAR</td></tr>
+</table>
+<small>
+NOTE: SQL Type is the corresponding SQL data type, and Default Type is
+the default ODB data type chosen by the server for the SQL data type.  The
+default ODB data type for SQL data types not listed in the above table is ODB_CHAR.
+</small>
+<h3><a name="paramtypes">ODB Parameter Types</a></h3>
+<table cellpadding="5" cellspacing="0" border="1">
+<tr><td><b>Type</b></td><td><b>Description</b></td></tr>
+<tr><td valign="top">ODB_PARAM_NONE</td><td>Indicates that parameter is undefined.</td></tr>
+<tr><td valign="top">ODB_PARAM_INPUT</td><td>Indicates that parameter is used for input.</td></tr>
+<tr><td valign="top">ODB_PARAM_OUTPUT</td><td>Indicates that parameter is used for output.</td></tr>
+<tr><td valign="top">ODB_PARAM_INOUT</td><td>Indicates that parameter is used for input and output.</td></tr>
+<tr><td valign="top">ODB_PARAM_RETURNVAL</td><td>Indicates that parameter is a stored procedure's return value.</td></tr>
+<tr><td valign="top">ODB_PARAM_RESULTCOL</td><td>Indicates that parameter is a result column.</td></tr>
+</table>
+<h3><a name="colinfo">ODB Column Info Flags</a></h3>
+<table cellpadding="5" cellspacing="0" border="1">
+<tr><td><b>Flag</b></td><td><b>Description</b></td></tr>
+<tr><td valign="top">ODB_COLINFO_NOTNULL</td><td>Column does not allow nulls.</td></tr>
+<tr><td valign="top">ODB_COLINFO_UNSIGNED</td><td>Column data type is an unsigned type.</td></tr>
+<tr><td valign="top">ODB_COLINFO_AUTONUMBER</td><td>Auto increment or identity column.</td></tr>
+<tr><td valign="top">ODB_COLINFO_PRIMARYKEY</td><td>Column is primary key</td></tr>
+<tr><td valign="top">ODB_COLINFO_HIDDEN</td><td>Hidden column</td></tr>
+</table>
+<h3><a name="cursortypes">ODB Cursor Types</a></h3>
+<table cellpadding="5" cellspacing="0" border="1">
+<tr><td><b>Type</b></td><td><b>Description</b></td></tr>
+<tr><td valign="top">ODB_CURSOR_FORWARD</td><td>Forward-only cursor.  This is the default cursor type, and does not support scrolling or row operations.</td></tr>
+<tr><td valign="top">ODB_CURSOR_STATIC</td><td>Static (read-only) cursor.  This cursor supports scrolling, and row operations that do not modify the underlying data.</td></tr>
+<tr><td valign="top">ODB_CURSOR_KEYSET</td><td>Keyset cursor.  This cursor supports scrolling, and all row operations.</td></tr>
+<tr><td valign="top">ODB_CURSOR_DYNAMIC</td><td>Dynamic cursor.  This cursor supports scrolling, and all row operations.</td></tr>
+</table>
+<h3><a name="concurtypes">ODB Cursor Concurrency Types</a></h3>
+<table cellpadding="5" cellspacing="0" border="1">
+<tr><td><b>Type</b></td><td><b>Description</b></td></tr>
+<tr><td valign="top">ODB_CONCUR_DEFAULT</td><td>Use to specify default concurrency for a cursor.  The default concurrency for forward-only and static cursors is read-only, and row version for keyset and dynamic cursors.</td></tr>
+<tr><td valign="top">ODB_CONCUR_READONLY</td><td>Use to specify read-only concurrency for a cursor.</td></tr>
+<tr><td valign="top">ODB_CONCUR_LOCK</td><td>Use to specify scroll lock concurrency for a cursor.</td></tr>
+<tr><td valign="top">ODB_CONCUR_ROWVER</td><td>Use to specify row version concurrency for a cursor.</td></tr>
+<tr><td valign="top">ODB_CONCUR_VALUES</td><td>Use to specify value-based concurrency for a cursor.</td></tr>
+</table>
+<h3><a name="rowstatus">ODB Row Status Values</a></h3>
+<table cellpadding="5" cellspacing="0" border="1">
+<tr><td><b>Status</b></td><td><b>Description</b></td></tr>
+<tr><td valign="top">ODB_ROWSTAT_ERROR</td><td>An error occurred for row.</td></tr>
+<tr><td valign="top">ODB_ROWSTAT_SUCCESS</td><td>Successfully fetched row.</td></tr>
+<tr><td valign="top">ODB_ROWSTAT_UPDATED</td><td>Row was updated.</td></tr>
+<tr><td valign="top">ODB_ROWSTAT_DELETED</td><td>Row was deleted.</td></tr>
+<tr><td valign="top">ODB_ROWSTAT_ADDED</td><td>Row was added.</td></tr>
+<tr><td valign="top">ODB_ROWSTAT_NOROW</td><td>Not a valid row.</td></tr>
+<tr><td valign="top">ODB_ROWSTAT_UNKNOWN</td><td>Status of row is unknown or could not be determined.</td></tr>
+</table>
+<br>&nbsp;
+<h3><a name="functions">FUNCTIONS</a></h3>
+<dl>
+<dt><h3><a name="odbAllocate">odbAllocate</a></h3>
+<dd>Allocate a connection or query object.<br>
+<pre><b>odbHANDLE odbAllocate (</b>
+  <b>odbHANDLE</b> hCon
+<b>);</b></pre>
+</dd>
+<dt><h4>Parameters</h4>
+<dd><dl>
+<dt>hCon
+<dd>
+[in] Handle to a connection object.
+</dd>
+</dl></dd>
+<dt><h4>Return Values</h4>
+<dd>
+If successful, returns the handle to the allocated odject, or NULL if an error occurs.
+</dd>
+<dt><h4>Remarks</h4>
+<dd>
+All connection and query objects must be allocated before they can be used by any other functions.  This function is used to allocate both connection and query objects.
+<br>&nbsp;<br>
+</dd>
+<dt><h3><a name="odbBindCol">odbBindCol</a></h3>
+<dd>Bind result column to specified data type.<br>
+<pre><b>odbBOOL odbBindCol (</b>
+  <b>odbHANDLE</b> hQry,
+  <b>odbUSHORT</b> usCol,
+  <b>odbSHORT</b>  sDataType,
+  <b>odbLONG</b>   lDataLen,
+  <b>odbBOOL</b>   bFinal
+<b>);</b></pre>
+</dd>
+<dt><h4>Parameters</h4>
+<dd><dl>
+<dt>hQry
+<dd>
+[in] Handle to a query object.
+<br>&nbsp;</dd>
+<dt>usCol
+<dd>
+[in] Column number (1-based).
+<br>&nbsp;</dd>
+<dt>sDataType
+<dd>
+[in] <a href="#datatypes">ODB data type</a> to be used for bind.  Set this value to 0 to use the default <a href="#datatypes">ODB data type</a>.
+<br>&nbsp;</dd>
+<dt>lDataLen
+<dd>
+[in] Length of data to be used for bind.  Set this value to 0 if binding to a fixed length data type.
+<br>&nbsp;</dd>
+<dt>bFinal
+<dd>
+[in] Set to FALSE if more request data of the same type needs to be sent to server.  Set to TRUE if it is the final request data, upon which the server will send the response data.
+</dd>
+</dl></dd>
+<dt><h4>Return Values</h4>
+<dd>
+Returns nonzero if the function is successful, otherwise returns zero if an error occurs.
+</dd>
+<dt><h4>Remarks</h4>
+<dd>
+Normally this function does not need to be called because all columns are automatically bound by the server.  The default data type chosen for the bind is one that allows the column data to be easily used within virtually all environments. For example, ODB_CHAR is chosen for columns of type bigint, because provisions for 64-bit integers are not always available.  Use this function to change the data type binding for a column.
+<br>&nbsp;<br>
+</dd>
+<dt><h3><a name="odbBindInOutParam">odbBindInOutParam</a></h3>
+<dd>Bind input/output parameter to specified data type.<br>
+<pre><b>odbBOOL odbBindInOutParam (</b>
+  <b>odbHANDLE</b> hQry,
+  <b>odbUSHORT</b> usParam,
+  <b>odbSHORT</b>  sDataType,
+  <b>odbLONG</b>   lDataLen,
+  <b>odbBOOL</b>   bFinal
+<b>);</b></pre>
+</dd>
+<dt><h4>Parameters</h4>
+<dd><dl>
+<dt>hQry
+<dd>
+[in] Handle to a query object.
+<br>&nbsp;</dd>
+<dt>usParam
+<dd>
+[in] Parameter number (1-based).
+<br>&nbsp;</dd>
+<dt>sDataType
+<dd>
+[in] <a href="#datatypes">ODB data type</a> to be used for bind.  Set this value to 0 to use the default <a href="#datatypes">ODB data type</a>.
+<br>&nbsp;</dd>
+<dt>lDataLen
+<dd>
+[in] Length of data to be used for bind.  Set this value to 0 if binding to a fixed length data type.
+<br>&nbsp;</dd>
+<dt>bFinal
+<dd>
+[in] Set to FALSE if more request data of the same type needs to be sent to server.  Set to TRUE if it is the final request data, upon which the server will send the response data.
+</dd>
+</dl></dd>
+<dt><h4>Return Values</h4>
+<dd>
+Returns nonzero if the function is successful, otherwise returns zero if an error occurs.
+</dd>
+<dt><h4>Remarks</h4>
+<dd>
+After preparing a query and before executing it, call this function to bind an input/output parameter.
+<br>&nbsp;<br>
+</dd>
+<dt><h3><a name="odbBindInputParam">odbBindInputParam</a></h3>
+<dd>Bind input parameter to specified data type.<br>
+<pre><b>odbBOOL odbBindInputParam (</b>
+  <b>odbHANDLE</b> hQry,
+  <b>odbUSHORT</b> usParam,
+  <b>odbSHORT</b>  sDataType,
+  <b>odbLONG</b>   lDataLen,
+  <b>odbBOOL</b>   bFinal
+<b>);</b></pre>
+</dd>
+<dt><h4>Parameters</h4>
+<dd><dl>
+<dt>hQry
+<dd>
+[in] Handle to a query object.
+<br>&nbsp;</dd>
+<dt>usParam
+<dd>
+[in] Parameter number (1-based).
+<br>&nbsp;</dd>
+<dt>sDataType
+<dd>
+[in] <a href="#datatypes">ODB data type</a> to be used for bind.  Set this value to 0 to use the default <a href="#datatypes">ODB data type</a>.
+<br>&nbsp;</dd>
+<dt>lDataLen
+<dd>
+[in] Length of data to be used for bind.  Set this value to 0 if binding to a fixed length data type.
+<br>&nbsp;</dd>
+<dt>bFinal
+<dd>
+[in] Set to FALSE if more request data of the same type needs to be sent to server.  Set to TRUE if it is the final request data, upon which the server will send the response data.
+</dd>
+</dl></dd>
+<dt><h4>Return Values</h4>
+<dd>
+Returns nonzero if the function is successful, otherwise returns zero if an error occurs.
+</dd>
+<dt><h4>Remarks</h4>
+<dd>
+After preparing a query and before executing it, call this function to bind an input parameter.
+<br>&nbsp;<br>
+</dd>
+<dt><h3><a name="odbBindOutputParam">odbBindOutputParam</a></h3>
+<dd>Bind output parameter to specified data type.<br>
+<pre><b>odbBOOL odbBindOutputParam (</b>
+  <b>odbHANDLE</b> hQry,
+  <b>odbUSHORT</b> usParam,
+  <b>odbSHORT</b>  sDataType,
+  <b>odbLONG</b>   lDataLen,
+  <b>odbBOOL</b>   bFinal
+<b>);</b></pre>
+</dd>
+<dt><h4>Parameters</h4>
+<dd><dl>
+<dt>hQry
+<dd>
+[in] Handle to a query object.
+<br>&nbsp;</dd>
+<dt>usParam
+<dd>
+[in] Parameter number (1-based).
+<br>&nbsp;</dd>
+<dt>sDataType
+<dd>
+[in] <a href="#datatypes">ODB data type</a> to be used for bind.  Set this value to 0 to use the default <a href="#datatypes">ODB data type</a>.
+<br>&nbsp;</dd>
+<dt>lDataLen
+<dd>
+[in] Length of data to be used for bind.  Set this value to 0 if binding to a fixed length data type.
+<br>&nbsp;</dd>
+<dt>bFinal
+<dd>
+[in] Set to FALSE if more request data of the same type needs to be sent to server.  Set to TRUE if it is the final request data, upon which the server will send the response data.
+</dd>
+</dl></dd>
+<dt><h4>Return Values</h4>
+<dd>
+Returns nonzero if the function is successful, otherwise returns zero if an error occurs.
+</dd>
+<dt><h4>Remarks</h4>
+<dd>
+After preparing a query and before executing it, call this function to bind an output parameter.
+<br>&nbsp;<br>
+</dd>
+<dt><h3><a name="odbBindParam">odbBindParam</a></h3>
+<dd>Bind parameter to specified data type.<br>
+<pre><b>odbBOOL odbBindParam (</b>
+  <b>odbHANDLE</b> hQry,
+  <b>odbUSHORT</b> usParam,
+  <b>odbUSHORT</b> usType,
+  <b>odbSHORT</b>  sDataType,
+  <b>odbLONG</b>   lDataLen,
+  <b>odbBOOL</b>   bFinal
+<b>);</b></pre>
+</dd>
+<dt><h4>Parameters</h4>
+<dd><dl>
+<dt>hQry
+<dd>
+[in] Handle to a query object.
+<br>&nbsp;</dd>
+<dt>usParam
+<dd>
+[in] Parameter number (1-based).
+<br>&nbsp;</dd>
+<dt>usType
+<dd>
+[in] <a href="#paramtypes">ODB parameter type</a>.
+<br>&nbsp;</dd>
+<dt>sDataType
+<dd>
+[in] <a href="#datatypes">ODB data type</a> to be used for bind.  Set this value to 0 to use the default <a href="#datatypes">ODB data type</a>.
+<br>&nbsp;</dd>
+<dt>lDataLen
+<dd>
+[in] Length of data to be used for bind.  Set this value to 0 if binding to a fixed length data type.
+<br>&nbsp;</dd>
+<dt>bFinal
+<dd>
+[in] Set to FALSE if more request data of the same type needs to be sent to server.  Set to TRUE if it is the final request data, upon which the server will send the response data.
+</dd>
+</dl></dd>
+<dt><h4>Return Values</h4>
+<dd>
+Returns nonzero if the function is successful, otherwise returns zero if an error occurs.
+</dd>
+<dt><h4>Remarks</h4>
+<dd>
+After preparing a query and before executing it, call this function to bind a parameter.  Parameter binding should normally be performed with odbBindInOutParam, odbBindInputParam, and/or odbBindOutputParam.
+<br>&nbsp;<br>
+</dd>
+<dt><h3><a name="odbBindParamEx">odbBindParamEx</a></h3>
+<dd>Bind parameter to specified data type.<br>
+<pre><b>odbBOOL odbBindParamEx (</b>
+  <b>odbHANDLE</b> hQry,
+  <b>odbUSHORT</b> usParam,
+  <b>odbUSHORT</b> usType,
+  <b>odbSHORT</b>  sDataType,
+  <b>odbLONG</b>   lDataLen,
+  <b>odbSHORT</b>  sSqlType,
+  <b>odbULONG</b>  ulColSize,
+  <b>odbSHORT</b>  sDecDigits,
+  <b>odbBOOL</b>   bFinal
+<b>);</b></pre>
+</dd>
+<dt><h4>Parameters</h4>
+<dd><dl>
+<dt>hQry
+<dd>
+[in] Handle to a query object.
+<br>&nbsp;</dd>
+<dt>usParam
+<dd>
+[in] Parameter number (1-based).
+<br>&nbsp;</dd>
+<dt>usType
+<dd>
+[in] <a href="#paramtypes">ODB parameter type</a>.
+<br>&nbsp;</dd>
+<dt>sDataType
+<dd>
+[in] <a href="#datatypes">ODB data type</a> to be used for bind.  Set this value to 0 to use the default <a href="#datatypes">ODB data type</a>.
+<br>&nbsp;</dd>
+<dt>lDataLen
+<dd>
+[in] Length of data to be used for bind.  Set this value to 0 if binding to a fixed length data type.
+<br>&nbsp;</dd>
+<dt>sSqlType
+<dd>
+[in] SQL type of parameter.
+<br>&nbsp;</dd>
+<dt>ulColSize
+<dd>
+[in] The size of the column or expression of the corresponding parameter marker.
+<br>&nbsp;</dd>
+<dt>sDecDigits
+<dd>
+[in] The decimal digits of the column or expression of the corresponding parameter marker
+<br>&nbsp;</dd>
+<dt>bFinal
+<dd>
+[in] Set to FALSE if more request data of the same type needs to be sent to server.  Set to TRUE if it is the final request data, upon which the server will send the response data.
+</dd>
+</dl></dd>
+<dt><h4>Return Values</h4>
+<dd>
+Returns nonzero if the function is successful, otherwise returns zero if an error occurs.
+</dd>
+<dt><h4>Remarks</h4>
+<dd>
+After preparing a query and before executing it, call this function to bind a parameter.  Use this function if the paramter was not automatically described by the ODBTP service.
+<br>&nbsp;<br>
+</dd>
+<dt><h3><a name="odbColActualLen">odbColActualLen</a></h3>
+<dd>Obtain actual length of fetched column.<br>
+<pre><b>odbLONG odbColActualLen (</b>
+  <b>odbHANDLE</b> hQry,
+  <b>odbUSHORT</b> usCol
+<b>);</b></pre>
+</dd>
+<dt><h4>Parameters</h4>
+<dd><dl>
+<dt>hQry
+<dd>
+[in] Handle to a query object.
+<br>&nbsp;</dd>
+<dt>usCol
+<dd>
+[in] Column number (1-based).
+</dd>
+</dl></dd>
+<dt><h4>Return Values</h4>
+<dd>
+Returns the actual length of the column data.
+</dd>
+<dt><h4>Remarks</h4>
+<dd>
+This function can  be used to determine the actual length of a truncated column.
+<br>&nbsp;<br>
+</dd>
+<dt><h3><a name="odbColBaseName">odbColBaseName</a></h3>
+<dd>Get column base name.<br>
+<pre><b>odbPCSTR odbColBaseName (</b>
+  <b>odbHANDLE</b> hQry,
+  <b>odbUSHORT</b> usCol
+<b>);</b></pre>
+</dd>
+<dt><h4>Parameters</h4>
+<dd><dl>
+<dt>hQry
+<dd>
+[in] Handle to a query object.
+<br>&nbsp;</dd>
+<dt>usCol
+<dd>
+[in] Column number (1-based).
+</dd>
+</dl></dd>
+<dt><h4>Return Values</h4>
+<dd>
+Returns a pointer to the column base name text, or returns NULL if an error occurs.
+</dd>
+<dt><h4>Remarks</h4>
+<dd>
+Call this function to get the base name of a column.  The returned value is a pointer to data stored in the column buffer, and will be invalid if the buffer is reinitialized.
+<br>&nbsp;<br>
+</dd>
+<dt><h3><a name="odbColCatalog">odbColCatalog</a></h3>
+<dd>Get column's catalog.<br>
+<pre><b>odbPCSTR odbColCatalog (</b>
+  <b>odbHANDLE</b> hQry,
+  <b>odbUSHORT</b> usCol
+<b>);</b></pre>
+</dd>
+<dt><h4>Parameters</h4>
+<dd><dl>
+<dt>hQry
+<dd>
+[in] Handle to a query object.
+<br>&nbsp;</dd>
+<dt>usCol
+<dd>
+[in] Column number (1-based).
+</dd>
+</dl></dd>
+<dt><h4>Return Values</h4>
+<dd>
+Returns a pointer to the column's catalog name, or returns NULL if an error occurs.
+</dd>
+<dt><h4>Remarks</h4>
+<dd>
+Call this function to get the catalog, or database, corresponding to the column.  The returned value is a pointer to data stored in the column buffer, and will be invalid if the buffer is reinitialized.
+<br>&nbsp;<br>
+</dd>
+<dt><h3><a name="odbColData">odbColData</a></h3>
+<dd>Obtain fetched column data.<br>
+<pre><b>odbPVOID odbColData (</b>
+  <b>odbHANDLE</b> hQry,
+  <b>odbUSHORT</b> usCol
+<b>);</b></pre>
+</dd>
+<dt><h4>Parameters</h4>
+<dd><dl>
+<dt>hQry
+<dd>
+[in] Handle to a query object.
+<br>&nbsp;</dd>
+<dt>usCol
+<dd>
+[in] Column number (1-based).
+</dd>
+</dl></dd>
+<dt><h4>Return Values</h4>
+<dd>
+Returns a pointer to the column data.  Note, that while NULL is a legitimate return value, it will also be returned if an error occurs.
+</dd>
+<dt><h4>Remarks</h4>
+<dd>
+This function is used to obtain the data from a column regardless of the <a href="#datatypes">ODB data type</a> to which it is bound.  The returned value is a pointer to data stored in the row buffer, and will be invalid if the buffer is reinitialized.
+<br>&nbsp;<br>
+</dd>
+<dt><h3><a name="odbColDataByte">odbColDataByte</a></h3>
+<dd>Obtain fetched column data as byte.<br>
+<pre><b>odbBYTE odbColDataByte (</b>
+  <b>odbHANDLE</b> hQry,
+  <b>odbUSHORT</b> usCol
+<b>);</b></pre>
+</dd>
+<dt><h4>Parameters</h4>
+<dd><dl>
+<dt>hQry
+<dd>
+[in] Handle to a query object.
+<br>&nbsp;</dd>
+<dt>usCol
+<dd>
+[in] Column number (1-based).
+</dd>
+</dl></dd>
+<dt><h4>Return Values</h4>
+<dd>
+Returns the byte value of the column.  Note, that while 0 is a legitimate return value, it will also be returned if the column value is NULL or an error occurs.
+</dd>
+<dt><h4>Remarks</h4>
+<dd>
+This function should be used to obtain data from columns bound to <a href="#datatypes">ODB data types</a> ODB_BIT, ODB_TINYINT or ODB_UTINYINT.
+<br>&nbsp;<br>
+</dd>
+<dt><h3><a name="odbColDataDouble">odbColDataDouble</a></h3>
+<dd>Obtain fetched column data as double.<br>
+<pre><b>odbDOUBLE odbColDataDouble (</b>
+  <b>odbHANDLE</b> hQry,
+  <b>odbUSHORT</b> usCol
+<b>);</b></pre>
+</dd>
+<dt><h4>Parameters</h4>
+<dd><dl>
+<dt>hQry
+<dd>
+[in] Handle to a query object.
+<br>&nbsp;</dd>
+<dt>usCol
+<dd>
+[in] Column number (1-based).
+</dd>
+</dl></dd>
+<dt><h4>Return Values</h4>
+<dd>
+Returns the double value of the column.  Note, that while 0.0 is a legitimate return value, it will also be returned if the column value is NULL or an error occurs.
+</dd>
+<dt><h4>Remarks</h4>
+<dd>
+This function should be used to obtain data from columns bound to <a href="#datatypes">ODB data type</a> ODB_DOUBLE.
+<br>&nbsp;<br>
+</dd>
+<dt><h3><a name="odbColDataFloat">odbColDataFloat</a></h3>
+<dd>Obtain fetched column data as float.<br>
+<pre><b>odbFLOAT odbColDataFloat (</b>
+  <b>odbHANDLE</b> hQry,
+  <b>odbUSHORT</b> usCol
+<b>);</b></pre>
+</dd>
+<dt><h4>Parameters</h4>
+<dd><dl>
+<dt>hQry
+<dd>
+[in] Handle to a query object.
+<br>&nbsp;</dd>
+<dt>usCol
+<dd>
+[in] Column number (1-based).
+</dd>
+</dl></dd>
+<dt><h4>Return Values</h4>
+<dd>
+Returns the float value of the column.  Note, that while 0.0 is a legitimate return value, it will also be returned if the column value is NULL or an error occurs.
+</dd>
+<dt><h4>Remarks</h4>
+<dd>
+This function should be used to obtain data from columns bound to <a href="#datatypes">ODB data type</a> ODB_REAL.
+<br>&nbsp;<br>
+</dd>
+<dt><h3><a name="odbColDataLen">odbColDataLen</a></h3>
+<dd>Obtain fetched column data length.<br>
+<pre><b>odbLONG odbColDataLen (</b>
+  <b>odbHANDLE</b> hQry,
+  <b>odbUSHORT</b> usCol
+<b>);</b></pre>
+</dd>
+<dt><h4>Parameters</h4>
+<dd><dl>
+<dt>hQry
+<dd>
+[in] Handle to a query object.
+<br>&nbsp;</dd>
+<dt>usCol
+<dd>
+[in] Column number (1-based).
+</dd>
+</dl></dd>
+<dt><h4>Return Values</h4>
+<dd>
+Returns the byte length of the column data.  It will return ODB_NULL if the column value is NULL or an error occurs.
+</dd>
+<dt><h4>Remarks</h4>
+<dd>
+This function is usually used to determine whether or not a column's data value is NULL.  If the value of a column is NULL, then the data length is equal to ODB_NULL.
+<br>&nbsp;<br>
+</dd>
+<dt><h3><a name="odbColDataLong">odbColDataLong</a></h3>
+<dd>Obtain fetched column data as long.<br>
+<pre><b>odbULONG odbColDataLong (</b>
+  <b>odbHANDLE</b> hQry,
+  <b>odbUSHORT</b> usCol
+<b>);</b></pre>
+</dd>
+<dt><h4>Parameters</h4>
+<dd><dl>
+<dt>hQry
+<dd>
+[in] Handle to a query object.
+<br>&nbsp;</dd>
+<dt>usCol
+<dd>
+[in] Column number (1-based).
+</dd>
+</dl></dd>
+<dt><h4>Return Values</h4>
+<dd>
+Returns the long value of the column.  Note, that while 0 is a legitimate return value, it will also be returned if the column value is NULL or an error occurs.
+</dd>
+<dt><h4>Remarks</h4>
+<dd>
+This function should be used to obtain data from columns bound to <a href="#datatypes">ODB data types</a> ODB_INT or ODB_UINT.
+<br>&nbsp;<br>
+</dd>
+<dt><h3><a name="odbColDataLongLong">odbColDataLongLong</a></h3>
+<dd>Obtain fetched column data as long long (64-bit integer).<br>
+<pre><b>odbULONGLONG odbColDataLongLong (</b>
+  <b>odbHANDLE</b> hQry,
+  <b>odbUSHORT</b> usCol
+<b>);</b></pre>
+</dd>
+<dt><h4>Parameters</h4>
+<dd><dl>
+<dt>hQry
+<dd>
+[in] Handle to a query object.
+<br>&nbsp;</dd>
+<dt>usCol
+<dd>
+[in] Column number (1-based).
+</dd>
+</dl></dd>
+<dt><h4>Return Values</h4>
+<dd>
+Returns the long long value of the column.  Note, that while 0 is a legitimate return value, it will also be returned if the column value is NULL or an error occurs.
+</dd>
+<dt><h4>Remarks</h4>
+<dd>
+This function should be used to obtain data from columns bound to <a href="#datatypes">ODB data types</a> ODB_BIGINT or ODB_UBIGINT.
+<br>&nbsp;<br>
+</dd>
+<dt><h3><a name="odbColDataShort">odbColDataShort</a></h3>
+<dd>Obtain fetched column data as short.<br>
+<pre><b>odbUSHORT odbColDataShort (</b>
+  <b>odbHANDLE</b> hQry,
+  <b>odbUSHORT</b> usCol
+<b>);</b></pre>
+</dd>
+<dt><h4>Parameters</h4>
+<dd><dl>
+<dt>hQry
+<dd>
+[in] Handle to a query object.
+<br>&nbsp;</dd>
+<dt>usCol
+<dd>
+[in] Column number (1-based).
+</dd>
+</dl></dd>
+<dt><h4>Return Values</h4>
+<dd>
+Returns the short value of the column.  Note, that while 0 is a legitimate return value, it will also be returned if the column value is NULL or an error occurs.
+</dd>
+<dt><h4>Remarks</h4>
+<dd>
+This function should be used to obtain data from columns bound to <a href="#datatypes">ODB data types</a> ODB_SMALLINT or ODB_USMALLINT.
+<br>&nbsp;<br>
+</dd>
+<dt><h3><a name="odbColDataText">odbColDataText</a></h3>
+<dd>Obtain fetched column data as text.<br>
+<pre><b>odbPSTR odbColDataText (</b>
+  <b>odbHANDLE</b> hQry,
+  <b>odbUSHORT</b> usCol
+<b>);</b></pre>
+</dd>
+<dt><h4>Parameters</h4>
+<dd><dl>
+<dt>hQry
+<dd>
+[in] Handle to a query object.
+<br>&nbsp;</dd>
+<dt>usCol
+<dd>
+[in] Column number (1-based).
+</dd>
+</dl></dd>
+<dt><h4>Return Values</h4>
+<dd>
+Returns a pointer to the text value of the column.  Note, that while a pointer to zero length text ("") is a legitimate return value, it will also be returned if the column value is NULL or an error occurs.
+</dd>
+<dt><h4>Remarks</h4>
+<dd>
+This function should be used to obtain data from columns bound to <a href="#datatypes">ODB data types</a> ODB_CHAR or ODB_WCHAR.  The returned value is a pointer to data stored in the row buffer, and will be invalid if the buffer is reinitialized.
+<br>&nbsp;<br>
+</dd>
+<dt><h3><a name="odbColDataTimestamp">odbColDataTimestamp</a></h3>
+<dd>Obtain fetched column data as ODB timestamp.<br>
+<pre><b>odbPTIMESTAMP odbColDataTimestamp (</b>
+  <b>odbHANDLE</b> hQry,
+  <b>odbUSHORT</b> usCol
+<b>);</b></pre>
+</dd>
+<dt><h4>Parameters</h4>
+<dd><dl>
+<dt>hQry
+<dd>
+[in] Handle to a query object.
+<br>&nbsp;</dd>
+<dt>usCol
+<dd>
+[in] Column number (1-based).
+</dd>
+</dl></dd>
+<dt><h4>Return Values</h4>
+<dd>
+Returns a pointer to the ODB timestamp value of the column.  Note, a zeroed ODB timestamp will be returned if the column value is NULL or an error occurs.
+</dd>
+<dt><h4>Remarks</h4>
+<dd>
+This function should be used to obtain data from columns bound to <a href="#datatypes">ODB data type</a> ODB_DATETIME.  The returned value is a pointer to data stored in the row buffer, and will be invalid if the buffer is reinitialized.
+<br>&nbsp;<br>
+</dd>
+<dt><h3><a name="odbColDataType">odbColDataType</a></h3>
+<dd>Get column data type.<br>
+<pre><b>odbSHORT odbColDataType (</b>
+  <b>odbHANDLE</b> hQry,
+  <b>odbUSHORT</b> usCol
+<b>);</b></pre>
+</dd>
+<dt><h4>Parameters</h4>
+<dd><dl>
+<dt>hQry
+<dd>
+[in] Handle to a query object.
+<br>&nbsp;</dd>
+<dt>usCol
+<dd>
+[in] Column number (1-based).
+</dd>
+</dl></dd>
+<dt><h4>Return Values</h4>
+<dd>
+Returns the column's <a href="#datatypes">ODB data type</a> or 0 if an error occurs.
+</dd>
+<dt><h4>Remarks</h4>
+<dd>
+This function is used to determine the <a href="#datatypes">ODB data type</a> to which a column is bound.  This value will be the same as the value returned by odbColDefaultDataType, unless it is changed with odbBindCol.
+<br>&nbsp;<br>
+</dd>
+<dt><h3><a name="odbColDecDigits">odbColDecDigits</a></h3>
+<dd>Get decimal digits or precision of column.<br>
+<pre><b>odbSHORT odbColDecDigits (</b>
+  <b>odbHANDLE</b> hQry,
+  <b>odbUSHORT</b> usCol
+<b>);</b></pre>
+</dd>
+<dt><h4>Parameters</h4>
+<dd><dl>
+<dt>hQry
+<dd>
+[in] Handle to a query object.
+<br>&nbsp;</dd>
+<dt>usCol
+<dd>
+[in] Column number (1-based).
+</dd>
+</dl></dd>
+<dt><h4>Return Values</h4>
+<dd>
+Returns the column's decimal digits.
+</dd>
+<dt><h4>Remarks</h4>
+<dd>
+This function is used to determine a column's decimal digits or precision.
+<br>&nbsp;<br>
+</dd>
+<dt><h3><a name="odbColDefaultDataType">odbColDefaultDataType</a></h3>
+<dd>Get column default data type.<br>
+<pre><b>odbSHORT odbColDefaultDataType (</b>
+  <b>odbHANDLE</b> hQry,
+  <b>odbUSHORT</b> usCol
+<b>);</b></pre>
+</dd>
+<dt><h4>Parameters</h4>
+<dd><dl>
+<dt>hQry
+<dd>
+[in] Handle to a query object.
+<br>&nbsp;</dd>
+<dt>usCol
+<dd>
+[in] Column number (1-based).
+</dd>
+</dl></dd>
+<dt><h4>Return Values</h4>
+<dd>
+Returns the column's default <a href="#datatypes">ODB data type</a>, or 0 if an error occurs.
+</dd>
+<dt><h4>Remarks</h4>
+<dd>
+This is the default <a href="#datatypes">ODB data type</a> that was used when the column was automatically bound by the server.  This is also the <a href="#datatypes">ODB data type</a> that will be used if it is not explicitly specified when calling odbBindCol.
+<br>&nbsp;<br>
+</dd>
+<dt><h3><a name="odbColFlags">odbColFlags</a></h3>
+<dd>Get column info flags.<br>
+<pre><b>odbULONG odbColFlags (</b>
+  <b>odbHANDLE</b> hQry,
+  <b>odbUSHORT</b> usCol
+<b>);</b></pre>
+</dd>
+<dt><h4>Parameters</h4>
+<dd><dl>
+<dt>hQry
+<dd>
+[in] Handle to a query object.
+<br>&nbsp;</dd>
+<dt>usCol
+<dd>
+[in] Column number (1-based).
+</dd>
+</dl></dd>
+<dt><h4>Return Values</h4>
+<dd>
+Returns the <a href="#colinfo">ODB column info flags</a> of the specified column.
+</dd>
+<dt><h4>Remarks</h4>
+<dd>
+<a href="#colinfo">ODB column info flags</a> can be used to determine additional details about a column.
+<br>&nbsp;<br>
+</dd>
+<dt><h3><a name="odbColName">odbColName</a></h3>
+<dd>Get column name.<br>
+<pre><b>odbPCSTR odbColName (</b>
+  <b>odbHANDLE</b> hQry,
+  <b>odbUSHORT</b> usCol
+<b>);</b></pre>
+</dd>
+<dt><h4>Parameters</h4>
+<dd><dl>
+<dt>hQry
+<dd>
+[in] Handle to a query object.
+<br>&nbsp;</dd>
+<dt>usCol
+<dd>
+[in] Column number (1-based).
+</dd>
+</dl></dd>
+<dt><h4>Return Values</h4>
+<dd>
+Returns a pointer to the column name text, or returns NULL if an error occurs.
+</dd>
+<dt><h4>Remarks</h4>
+<dd>
+Call this function to get the name of a column.  The returned value is a pointer to data stored in the column buffer, and will be invalid if the buffer is reinitialized.
+<br>&nbsp;<br>
+</dd>
+<dt><h3><a name="odbColNum">odbColNum</a></h3>
+<dd>Get column number corresponding to name.<br>
+<pre><b>odbUSHORT odbColNum (</b>
+  <b>odbHANDLE</b> hQry,
+  <b>odbPCSTR</b>  pszName
+<b>);</b></pre>
+</dd>
+<dt><h4>Parameters</h4>
+<dd><dl>
+<dt>hQry
+<dd>
+[in] Handle to a query object.
+<br>&nbsp;</dd>
+<dt>pszName
+<dd>
+[in] Name of column.
+</dd>
+</dl></dd>
+<dt><h4>Return Values</h4>
+<dd>
+Returns column number corresponding to the specified name, or returns 0 if an error occurs.
+</dd>
+<dt><h4>Remarks</h4>
+<dd>
+Call this function to get the column number corresponding to a column name.
+<br>&nbsp;<br>
+</dd>
+<dt><h3><a name="odbColSchema">odbColSchema</a></h3>
+<dd>Get column's schema.<br>
+<pre><b>odbPCSTR odbColSchema (</b>
+  <b>odbHANDLE</b> hQry,
+  <b>odbUSHORT</b> usCol
+<b>);</b></pre>
+</dd>
+<dt><h4>Parameters</h4>
+<dd><dl>
+<dt>hQry
+<dd>
+[in] Handle to a query object.
+<br>&nbsp;</dd>
+<dt>usCol
+<dd>
+[in] Column number (1-based).
+</dd>
+</dl></dd>
+<dt><h4>Return Values</h4>
+<dd>
+Returns a pointer to the column's schema name, or returns NULL if an error occurs.
+</dd>
+<dt><h4>Remarks</h4>
+<dd>
+Call this function to get the schema, or owner, corresponding to the column.  The returned value is a pointer to data stored in the column buffer, and will be invalid if the buffer is reinitialized.
+<br>&nbsp;<br>
+</dd>
+<dt><h3><a name="odbColSize">odbColSize</a></h3>
+<dd>Get column size.<br>
+<pre><b>odbULONG odbColSize (</b>
+  <b>odbHANDLE</b> hQry,
+  <b>odbUSHORT</b> usCol
+<b>);</b></pre>
+</dd>
+<dt><h4>Parameters</h4>
+<dd><dl>
+<dt>hQry
+<dd>
+[in] Handle to a query object.
+<br>&nbsp;</dd>
+<dt>usCol
+<dd>
+[in] Column number (1-based).
+</dd>
+</dl></dd>
+<dt><h4>Return Values</h4>
+<dd>
+Returns the max character size of the column, or returns 0 if an error occurs.
+</dd>
+<dt><h4>Remarks</h4>
+<dd>
+This value is the maximum character size of the column if it is bound to the <a href="#datatypes">ODB data type</a> ODB_CHAR.
+<br>&nbsp;<br>
+</dd>
+<dt><h3><a name="odbColSqlType">odbColSqlType</a></h3>
+<dd>Get SQL type of column.<br>
+<pre><b>odbSHORT odbColSqlType (</b>
+  <b>odbHANDLE</b> hQry,
+  <b>odbUSHORT</b> usCol
+<b>);</b></pre>
+</dd>
+<dt><h4>Parameters</h4>
+<dd><dl>
+<dt>hQry
+<dd>
+[in] Handle to a query object.
+<br>&nbsp;</dd>
+<dt>usCol
+<dd>
+[in] Column number (1-based).
+</dd>
+</dl></dd>
+<dt><h4>Return Values</h4>
+<dd>
+Returns the column's SQL type.
+</dd>
+<dt><h4>Remarks</h4>
+<dd>
+This function is used to determine a column's SQL type.
+<br>&nbsp;<br>
+</dd>
+<dt><h3><a name="odbColSqlTypeName">odbColSqlTypeName</a></h3>
+<dd>Get SQL type name of column.<br>
+<pre><b>odbSHORT odbColSqlTypeName (</b>
+  <b>odbHANDLE</b> hQry,
+  <b>odbUSHORT</b> usCol
+<b>);</b></pre>
+</dd>
+<dt><h4>Parameters</h4>
+<dd><dl>
+<dt>hQry
+<dd>
+[in] Handle to a query object.
+<br>&nbsp;</dd>
+<dt>usCol
+<dd>
+[in] Column number (1-based).
+</dd>
+</dl></dd>
+<dt><h4>Return Values</h4>
+<dd>
+Returns the column's SQL type name.  The returned value is a pointer to data stored in the column buffer, and will be invalid if the buffer is reinitialized.
+</dd>
+<dt><h4>Remarks</h4>
+<dd>
+This function is used to determine a column's SQL type name.
+<br>&nbsp;<br>
+</dd>
+<dt><h3><a name="odbColTable">odbColTable</a></h3>
+<dd>Get column's table.<br>
+<pre><b>odbPCSTR odbColTable (</b>
+  <b>odbHANDLE</b> hQry,
+  <b>odbUSHORT</b> usCol
+<b>);</b></pre>
+</dd>
+<dt><h4>Parameters</h4>
+<dd><dl>
+<dt>hQry
+<dd>
+[in] Handle to a query object.
+<br>&nbsp;</dd>
+<dt>usCol
+<dd>
+[in] Column number (1-based).
+</dd>
+</dl></dd>
+<dt><h4>Return Values</h4>
+<dd>
+Returns a pointer to the column's table name, or returns NULL if an error occurs.
+</dd>
+<dt><h4>Remarks</h4>
+<dd>
+Call this function to get the table corresponding to the column.  The returned value is a pointer to data stored in the column buffer, and will be invalid if the buffer is reinitialized.
+<br>&nbsp;<br>
+</dd>
+<dt><h3><a name="odbColTruncated">odbColTruncated</a></h3>
+<dd>Determine if column was truncated.<br>
+<pre><b>odbBOOL odbColTruncated (</b>
+  <b>odbHANDLE</b> hQry,
+  <b>odbUSHORT</b> usCol
+<b>);</b></pre>
+</dd>
+<dt><h4>Parameters</h4>
+<dd><dl>
+<dt>hQry
+<dd>
+[in] Handle to a query object.
+<br>&nbsp;</dd>
+<dt>usCol
+<dd>
+[in] Column number (1-based).
+</dd>
+</dl></dd>
+<dt><h4>Return Values</h4>
+<dd>
+Returns non-zero if column data was truncated.
+</dd>
+<dt><h4>Remarks</h4>
+<dd>
+Use this function to determine if a column's data was truncated.
+<br>&nbsp;<br>
+</dd>
+<dt><h3><a name="odbColUserData">odbColUserData</a></h3>
+<dd>Get column's user defined data.<br>
+<pre><b>odbPVOID odbColUserData (</b>
+  <b>odbHANDLE</b> hQry,
+  <b>odbUSHORT</b> usCol
+<b>);</b></pre>
+</dd>
+<dt><h4>Parameters</h4>
+<dd><dl>
+<dt>hQry
+<dd>
+[in] Handle to a query object.
+<br>&nbsp;</dd>
+<dt>usCol
+<dd>
+[in] Column number (1-based).
+</dd>
+</dl></dd>
+<dt><h4>Return Values</h4>
+<dd>
+Returns the pointer representing the column's user defined data.
+</dd>
+<dt><h4>Remarks</h4>
+<dd>
+This function is used to return a column's user defined data.  Use <a href="#odbSetColUserData">odbSetColUserData</a> to assign user defined data for a column.
+<br>&nbsp;<br>
+</dd>
+<dt><h3><a name="odbCommit">odbCommit</a></h3>
+<dd>Commit current transaction.<br>
+<pre><b>odbBOOL odbCommit (</b>
+  <b>odbHANDLE</b> hCon
+<b>);</b></pre>
+</dd>
+<dt><h4>Parameters</h4>
+<dd><dl>
+<dt>hCon
+<dd>
+[in] Handle to a connection object.
+</dd>
+</dl></dd>
+<dt><h4>Return Values</h4>
+<dd>
+Returns nonzero if the function is successful, otherwise returns zero if an error occurs.
+</dd>
+<dt><h4>Remarks</h4>
+<dd>
+If transactions have been enabled, call this function to commit any transactions since the last commit or rollback.  Transactions are enabled by setting the <a href="#attributes">ODB attribute</a> ODB_ATTR_TRANSACTIONS to a value other than ODB_TXN_NONE.
+<br>&nbsp;<br>
+</dd>
+<dt><h3><a name="odbConvertAll">odbConvertAll</a></h3>
+<dd>Convert all column data to character format.<br>
+<pre><b>odbBOOL odbConvertAll (</b>
+  <b>odbHANDLE</b> hCon,
+  <b>odbBOOL</b>   bConvert
+<b>);</b></pre>
+</dd>
+<dt><h4>Parameters</h4>
+<dd><dl>
+<dt>hCon
+<dd>
+[in] Handle to a connection object.
+<br>&nbsp;</dd>
+<dt>bConvert
+<dd>
+[in] Set to TRUE to convert column data, or FALSE to not convert column data.
+</dd>
+</dl></dd>
+<dt><h4>Return Values</h4>
+<dd>
+Returns nonzero if the function is successful, otherwise returns zero if an error occurs.
+</dd>
+<dt><h4>Remarks</h4>
+<dd>
+This function determines whether or not all result column data from subsequent queries will be converted to character format.  This is achieved by binding all columns to the <a href="#datatypes">ODB data type</a> ODB_CHAR.
+<br>&nbsp;<br>
+</dd>
+<dt><h3><a name="odbConvertDatetime">odbConvertDatetime</a></h3>
+<dd>Convert all datetime column data to character format.<br>
+<pre><b>odbBOOL odbConvertDatetime (</b>
+  <b>odbHANDLE</b> hCon,
+  <b>odbBOOL</b>   bConvert
+<b>);</b></pre>
+</dd>
+<dt><h4>Parameters</h4>
+<dd><dl>
+<dt>hCon
+<dd>
+[in] Handle to a connection object.
+<br>&nbsp;</dd>
+<dt>bConvert
+<dd>
+[in] Set to TRUE to convert column data, or FALSE to not convert column data.
+</dd>
+</dl></dd>
+<dt><h4>Return Values</h4>
+<dd>
+Returns nonzero if the function is successful, otherwise returns zero if an error occurs.
+</dd>
+<dt><h4>Remarks</h4>
+<dd>
+This function determines whether or not all result datetime column data from subsequent queries will be converted to character format.  This is achieved by binding all columns to the <a href="#datatypes">ODB data type</a> ODB_CHAR.
+<br>&nbsp;<br>
+</dd>
+<dt><h3><a name="odbConvertGuid">odbConvertGuid</a></h3>
+<dd>Convert all GUID (uniqueindentifier) column data to character format.<br>
+<pre><b>odbBOOL odbConvertGuid (</b>
+  <b>odbHANDLE</b> hCon,
+  <b>odbBOOL</b>   bConvert
+<b>);</b></pre>
+</dd>
+<dt><h4>Parameters</h4>
+<dd><dl>
+<dt>hCon
+<dd>
+[in] Handle to a connection object.
+<br>&nbsp;</dd>
+<dt>bConvert
+<dd>
+[in] Set to TRUE to convert column data, or FALSE to not convert column data.
+</dd>
+</dl></dd>
+<dt><h4>Return Values</h4>
+<dd>
+Returns nonzero if the function is successful, otherwise returns zero if an error occurs.
+</dd>
+<dt><h4>Remarks</h4>
+<dd>
+This function determines whether or not all result GUID column data from subsequent queries will be converted to character format.  This is achieved by binding all columns to the <a href="#datatypes">ODB data type</a> ODB_CHAR.
+<br>&nbsp;<br>
+</dd>
+<dt><h3><a name="odbCTimeToTimestamp">odbCTimeToTimestamp</a></h3>
+<dd>Convert C time to ODB timestamp.<br>
+<pre><b>void odbCTimeToTimestamp (</b>
+  <b>odbPTIMESTAMP</b> ptsTime,
+  <b>odbLONG</b>       lTime
+<b>);</b></pre>
+</dd>
+<dt><h4>Parameters</h4>
+<dd><dl>
+<dt>ptsTime
+<dd>
+[out] Pointer to ODB timestamp variable to store conversion of C time.
+<br>&nbsp;</dd>
+<dt>lTime
+<dd>
+[in] C time value to be converted to ODB timestamp.
+</dd>
+</dl></dd>
+<dt><h4>Return Values</h4>
+<dd>
+This function does not return a value.
+</dd>
+<dt><h4>Remarks</h4>
+<dd>
+Use this function to convert a C time value to an ODB timestamp value.  This function is provided so that datetime data can be processed with C time functions.
+<br>&nbsp;<br>
+</dd>
+<dt><h3><a name="odbDescribeSqlType">odbDescribeSqlType</a></h3>
+<dd>Describe SQL type.<br>
+<pre><b>odbBOOL odbDescribeSqlType (</b>
+  <b>odbPCSTR</b>  pszSqlTypeName,
+  <b>odbPSHORT</b> psSqlType,
+  <b>odbPULONG</b> pulColSize,
+  <b>odbPSHORT</b> psDecDigits
+<b>);</b></pre>
+</dd>
+<dt><h4>Parameters</h4>
+<dd><dl>
+<dt>pszSqlTypeName
+<dd>
+[in] Pointer to string containing name of SQL type to be described.
+<br>&nbsp;</dd>
+<dt>psSqlType
+<dd>
+[out] Pointer to variable to store numeric equivalent of SQL type name.
+<br>&nbsp;</dd>
+<dt>pulColSize
+<dd>
+[out] Pointer to variable to store column size of SQL type.
+<br>&nbsp;</dd>
+<dt>psDecDigits
+<dd>
+[out] Pointer to variable to store decimal digits or precision of SQL type.
+</dd>
+</dl></dd>
+<dt><h4>Return Values</h4>
+<dd>
+Returns nonzero if the function is successful, otherwise returns zero if an error occurs.
+</dd>
+<dt><h4>Remarks</h4>
+<dd>
+This function is used to describe a SQL type from its name. The returned data can be then be used with <a href="#odbBindParamEx">odbBindParamEx</a>.
+<br>&nbsp;<br>
+</dd>
+<dt><h3><a name="odbDetachQry">odbDetachQry</a></h3>
+<dd>Detach query object from its connection object.<br>
+<pre><b>odbBOOL odbDetachQry (</b>
+  <b>odbHANDLE</b> hQry
+<b>);</b></pre>
+</dd>
+<dt><h4>Parameters</h4>
+<dd><dl>
+<dt>hQry
+<dd>
+[in] Handle to a query object.
+</dd>
+</dl></dd>
+<dt><h4>Return Values</h4>
+<dd>
+Returns nonzero if the function is successful, otherwise returns zero if an error occurs.
+</dd>
+<dt><h4>Remarks</h4>
+<dd>
+Use this function to detach a query object from its connection object.  This allows cached results (see <a href="#odbUseRowCache">odbUseRowCache</a>) associated with the query object to be retained offline. The detached object cannot be used to execute another query, and must be explicitly freed with <a href="#odbFree">odbFree</a>.
+<br>&nbsp;<br>
+</dd>
+<dt><h3><a name="odbDropQry">odbDropQry</a></h3>
+<dd>Drop query resource maintained by server.<br>
+<pre><b>odbBOOL odbDropQry (</b>
+  <b>odbHANDLE</b> hQry
+<b>);</b></pre>
+</dd>
+<dt><h4>Parameters</h4>
+<dd><dl>
+<dt>hQry
+<dd>
+[in] Handle to a query object.
+</dd>
+</dl></dd>
+<dt><h4>Return Values</h4>
+<dd>
+Returns nonzero if the function is successful, otherwise returns zero if an error occurs.
+</dd>
+<dt><h4>Remarks</h4>
+<dd>
+This function can be used to drop the underlying remote query resource maintained by the ODBTP service.  The state of the local query object is not changed by this function.
+<br>&nbsp;<br>
+</dd>
+<dt><h3><a name="odbExecute">odbExecute</a></h3>
+<dd>Execute query.<br>
+<pre><b>odbBOOL odbExecute (</b>
+  <b>odbHANDLE</b> hQry,
+  <b>odbPCSTR</b>  pszSQL
+<b>);</b></pre>
+</dd>
+<dt><h4>Parameters</h4>
+<dd><dl>
+<dt>hQry
+<dd>
+[in] Handle to a query object.
+<br>&nbsp;</dd>
+<dt>pszSQL
+<dd>
+[in] SQL (Query) string to be executed.  Set this value to NULL to execute a previosly prepared query or procedure.
+</dd>
+</dl></dd>
+<dt><h4>Return Values</h4>
+<dd>
+Returns nonzero if the function is successful, otherwise returns zero if an error occurs.
+</dd>
+<dt><h4>Remarks</h4>
+<dd>
+This function is used to execute a query.  This function reinitializes the column and row buffers during its operation.  The parameter and parameter info buffers will also be reinitialized if the value of pszSQL is not NULL.  If the query returns a result set, the corresponding column info is stored in the column buffer.
+<br>&nbsp;<br>
+</dd>
+<dt><h3><a name="odbFetchNextResult">odbFetchNextResult</a></h3>
+<dd>Fetch next query result.<br>
+<pre><b>odbBOOL odbFetchNextResult (</b>
+  <b>odbHANDLE</b> hQry
+<b>);</b></pre>
+</dd>
+<dt><h4>Parameters</h4>
+<dd><dl>
+<dt>hQry
+<dd>
+[in] Handle to a query object.
+</dd>
+</dl></dd>
+<dt><h4>Return Values</h4>
+<dd>
+Returns nonzero if the function is successful, otherwise returns zero if an error occurs.
+</dd>
+<dt><h4>Remarks</h4>
+<dd>
+This function is used to fetch the next result from a previously executed query.  This function reinitializes the column and row buffers during its operation.  If the next result returns a result set, the corresponding column info is stored in the column buffer.
+<br>&nbsp;<br>
+</dd>
+<dt><h3><a name="odbFetchRow">odbFetchRow</a></h3>
+<dd>Fetch query result row.<br>
+<pre><b>odbBOOL odbFetchRow (</b>
+  <b>odbHANDLE</b> hQry
+<b>);</b></pre>
+</dd>
+<dt><h4>Parameters</h4>
+<dd><dl>
+<dt>hQry
+<dd>
+[in] Handle to a query object.
+</dd>
+</dl></dd>
+<dt><h4>Return Values</h4>
+<dd>
+Returns nonzero if the function is successful, otherwise returns zero if an error occurs.
+</dd>
+<dt><h4>Remarks</h4>
+<dd>
+This function is used to fetch a row from a result set.  The function reinitializes the row buffer, and then stores the fetched data, if any, into the buffer.  This function is typically used when a cursor has not been specified with odbSetCursor.
+<br>&nbsp;<br>
+</dd>
+<dt><h3><a name="odbFetchRowAbs">odbFetchRowAbs</a></h3>
+<dd>Fetch query result row absolutely.<br>
+<pre><b>odbBOOL odbFetchRowAbs (</b>
+  <b>odbHANDLE</b> hQry,
+  <b>odbLONG</b>   lRow
+<b>);</b></pre>
+</dd>
+<dt><h4>Parameters</h4>
+<dd><dl>
+<dt>hQry
+<dd>
+[in] Handle to a query object.
+<br>&nbsp;</dd>
+<dt>lRow
+<dd>
+[in] Row to be fetched.
+</dd>
+</dl></dd>
+<dt><h4>Return Values</h4>
+<dd>
+Returns nonzero if the function is successful, otherwise returns zero if an error occurs.
+</dd>
+<dt><h4>Remarks</h4>
+<dd>
+This function is used to fetch a row absolutely from a result set.  The function reinitializes the row buffer, and then stores the fetched data, if any, into the buffer.  This function can only be used if a static, keyset or dynamic cursor was specified with odbSetCursor.
+<br>&nbsp;<br>
+</dd>
+<dt><h3><a name="odbFetchRowBookmark">odbFetchRowBookmark</a></h3>
+<dd>Fetch query result row relative to bookmarked row.<br>
+<pre><b>odbBOOL odbFetchRowBookmark (</b>
+  <b>odbHANDLE</b> hQry,
+  <b>odbLONG</b>   lRowOffset
+<b>);</b></pre>
+</dd>
+<dt><h4>Parameters</h4>
+<dd><dl>
+<dt>hQry
+<dd>
+[in] Handle to a query object.
+<br>&nbsp;</dd>
+<dt>lRowOffset
+<dd>
+[in] Offset of row to be fetched relative to bookmarked row.
+</dd>
+</dl></dd>
+<dt><h4>Return Values</h4>
+<dd>
+Returns nonzero if the function is successful, otherwise returns zero if an error occurs.
+</dd>
+<dt><h4>Remarks</h4>
+<dd>
+This function is used to fetch a row relative to a bookmarked row from a result set.  The function reinitializes the row buffer, and then stores the fetched data, if any, into the buffer.  This function can only be used if bookmark support was enabled when a static, keyset or dynamic cursor was specified with odbSetCursor.
+<br>&nbsp;<br>
+</dd>
+<dt><h3><a name="odbFetchRowFirst">odbFetchRowFirst</a></h3>
+<dd>Fetch first query result row.<br>
+<pre><b>odbBOOL odbFetchRowFirst (</b>
+  <b>odbHANDLE</b> hQry
+<b>);</b></pre>
+</dd>
+<dt><h4>Parameters</h4>
+<dd><dl>
+<dt>hQry
+<dd>
+[in] Handle to a query object.
+</dd>
+</dl></dd>
+<dt><h4>Return Values</h4>
+<dd>
+Returns nonzero if the function is successful, otherwise returns zero if an error occurs.
+</dd>
+<dt><h4>Remarks</h4>
+<dd>
+This function is used to fetch the first row from a result set.  The function reinitializes the row buffer, and then stores the fetched data, if any, into the buffer.  This function can only be used if a static, keyset or dynamic cursor was specified with odbSetCursor.
+<br>&nbsp;<br>
+</dd>
+<dt><h3><a name="odbFetchRowLast">odbFetchRowLast</a></h3>
+<dd>Fetch last query result row.<br>
+<pre><b>odbBOOL odbFetchRowLast (</b>
+  <b>odbHANDLE</b> hQry
+<b>);</b></pre>
+</dd>
+<dt><h4>Parameters</h4>
+<dd><dl>
+<dt>hQry
+<dd>
+[in] Handle to a query object.
+</dd>
+</dl></dd>
+<dt><h4>Return Values</h4>
+<dd>
+Returns nonzero if the function is successful, otherwise returns zero if an error occurs.
+</dd>
+<dt><h4>Remarks</h4>
+<dd>
+This function is used to fetch the last row from a result set.  The function reinitializes the row buffer, and then stores the fetched data, if any, into the buffer.  This function can only be used if a static, keyset or dynamic cursor was specified with odbSetCursor.
+<br>&nbsp;<br>
+</dd>
+<dt><h3><a name="odbFetchRowNext">odbFetchRowNext</a></h3>
+<dd>Fetch next query result row.<br>
+<pre><b>odbBOOL odbFetchRowNext (</b>
+  <b>odbHANDLE</b> hQry
+<b>);</b></pre>
+</dd>
+<dt><h4>Parameters</h4>
+<dd><dl>
+<dt>hQry
+<dd>
+[in] Handle to a query object.
+</dd>
+</dl></dd>
+<dt><h4>Return Values</h4>
+<dd>
+Returns nonzero if the function is successful, otherwise returns zero if an error occurs.
+</dd>
+<dt><h4>Remarks</h4>
+<dd>
+This function is used to fetch the next row from a result set.  The function reinitializes the row buffer, and then stores the fetched data, if any, into the buffer.  This function can only be used if a static, keyset or dynamic cursor was specified with odbSetCursor.
+<br>&nbsp;<br>
+</dd>
+<dt><h3><a name="odbFetchRowPrev">odbFetchRowPrev</a></h3>
+<dd>Fetch previous query result row.<br>
+<pre><b>odbBOOL odbFetchRowPrev (</b>
+  <b>odbHANDLE</b> hQry
+<b>);</b></pre>
+</dd>
+<dt><h4>Parameters</h4>
+<dd><dl>
+<dt>hQry
+<dd>
+[in] Handle to a query object.
+</dd>
+</dl></dd>
+<dt><h4>Return Values</h4>
+<dd>
+Returns nonzero if the function is successful, otherwise returns zero if an error occurs.
+</dd>
+<dt><h4>Remarks</h4>
+<dd>
+This function is used to fetch the previous row from a result set.  The function reinitializes the row buffer, and then stores the fetched data, if any, into the buffer.  This function can only be used if a static, keyset or dynamic cursor was specified with odbSetCursor.
+<br>&nbsp;<br>
+</dd>
+<dt><h3><a name="odbFetchRowRel">odbFetchRowRel</a></h3>
+<dd>Fetch query result row relative to current row.<br>
+<pre><b>odbBOOL odbFetchRowRel (</b>
+  <b>odbHANDLE</b> hQry,
+  <b>odbLONG</b>   lRowOffset
+<b>);</b></pre>
+</dd>
+<dt><h4>Parameters</h4>
+<dd><dl>
+<dt>hQry
+<dd>
+[in] Handle to a query object.
+<br>&nbsp;</dd>
+<dt>lRowOffset
+<dd>
+[in] Offset of row to be fetched relative to current row.
+</dd>
+</dl></dd>
+<dt><h4>Return Values</h4>
+<dd>
+Returns nonzero if the function is successful, otherwise returns zero if an error occurs.
+</dd>
+<dt><h4>Remarks</h4>
+<dd>
+This function is used to fetch a row relative to the current row from a result set.  The function reinitializes the row buffer, and then stores the fetched data, if any, into the buffer.  This function can only be used if a static, keyset or dynamic cursor was specified with odbSetCursor.
+<br>&nbsp;<br>
+</dd>
+<dt><h3><a name="odbFetchRowReread">odbFetchRowReread</a></h3>
+<dd>Reread last fetched query result row.<br>
+<pre><b>odbBOOL odbFetchRowReread (</b>
+  <b>odbHANDLE</b> hQry
+<b>);</b></pre>
+</dd>
+<dt><h4>Parameters</h4>
+<dd><dl>
+<dt>hQry
+<dd>
+[in] Handle to a query object.
+</dd>
+</dl></dd>
+<dt><h4>Return Values</h4>
+<dd>
+Returns nonzero if the function is successful, otherwise returns zero if an error occurs.
+</dd>
+<dt><h4>Remarks</h4>
+<dd>
+This function is used to reread the last fetched row from a result set.  The function reinitializes the row buffer, and then stores the fetched data, if any, into the buffer.  This function can only be used if a static, keyset or dynamic cursor was specified with odbSetCursor or if the value of the <a href="#attributes">ODB attribute</a> ODB_ATTR_FETCHROWCOUNT is set to 1.
+<br>&nbsp;<br>
+</dd>
+<dt><h3><a name="odbFetchRowsIntoCache">odbFetchRowsIntoCache</a></h3>
+<dd>Fetch rows into memory.<br>
+<pre><b>odbBOOL odbFetchRowsIntoCache (</b>
+  <b>odbHANDLE</b> hQry
+<b>);</b></pre>
+</dd>
+<dt><h4>Parameters</h4>
+<dd><dl>
+<dt>hQry
+<dd>
+[in] Handle to a query object.
+</dd>
+</dl></dd>
+<dt><h4>Return Values</h4>
+<dd>
+Returns nonzero if the function is successful, otherwise returns zero if an error occurs.
+</dd>
+<dt><h4>Remarks</h4>
+<dd>
+This function can be used to fetch multiple rows from the current result set into the row cache.  The row cache must be enabled with <a href="#odbUseRowCache">odbUseRowCache</a> prior to executing this function.  Cached rows can be scrolled even if a cursor was not enabled or is not supported.
+<br>&nbsp;<br>
+</dd>
+<dt><h3><a name="odbFinalizeRequest">odbFinalizeRequest</a></h3>
+<dd>Finalize client request.<br>
+<pre><b>odbBOOL odbFinalizeRequest (</b>
+  <b>odbHANDLE</b> hOdb
+<b>);</b></pre>
+</dd>
+<dt><h4>Parameters</h4>
+<dd><dl>
+<dt>hOdb
+<dd>
+[in] Handle to a connection or query object.
+</dd>
+</dl></dd>
+<dt><h4>Return Values</h4>
+<dd>
+Returns nonzero if the function is successful, otherwise returns zero if an error occurs.
+</dd>
+<dt><h4>Remarks</h4>
+<dd>
+This function is used to finalize a batched client request. Batched client requests are made with functions like <a href="#odbBindCol">odbBindCol</a>, <a href="#odbSetCol">odbSetCol</a>, <a href="#odbBindParam">odbBindParam</a> and <a href="#odbSetParam">odbSetParam</a>.
+<br>&nbsp;<br>
+</dd>
+<dt><h3><a name="odbFree">odbFree</a></h3>
+<dd>Free previously allocated connection or query object.<br>
+<pre><b>void odbFree (</b>
+  <b>odbHANDLE</b> hOdb
+<b>);</b></pre>
+</dd>
+<dt><h4>Parameters</h4>
+<dd><dl>
+<dt>hOdb
+<dd>
+[in] Handle to a connection or query object.
+</dd>
+</dl></dd>
+<dt><h4>Return Values</h4>
+<dd>
+This function does not return a value.
+</dd>
+<dt><h4>Remarks</h4>
+<dd>
+Use this function to free any connection or query objects that were allocated with odbAllocate.  If the object to be freed is a connection object, then any associated query objects will also be freed.
+<br>&nbsp;<br>
+</dd>
+<dt><h3><a name="odbGetAttrLong">odbGetAttrLong</a></h3>
+<dd>Get long <a href="#attributes">ODB attribute</a> value.<br>
+<pre><b>odbBOOL odbGetAttrLong (</b>
+  <b>odbHANDLE</b> hCon,
+  <b>odbLONG</b>   lAttr,
+  <b>odbPULONG</b> pulVal
+<b>);</b></pre>
+</dd>
+<dt><h4>Parameters</h4>
+<dd><dl>
+<dt>hCon
+<dd>
+[in] Handle to a connection object.
+<br>&nbsp;</dd>
+<dt>lAttr
+<dd>
+[in] <a href="#attributes">ODB attribute</a>.
+<br>&nbsp;</dd>
+<dt>pulVal
+<dd>
+[out] Pointer to long variable to store long attribute value.
+</dd>
+</dl></dd>
+<dt><h4>Return Values</h4>
+<dd>
+Returns nonzero if the function is successful, otherwise returns zero if an error occurs.
+</dd>
+<dt><h4>Remarks</h4>
+<dd>
+Use this function to retrieve any <a href="#attributes">ODB attribute</a> whose value is a number.
+<br>&nbsp;<br>
+</dd>
+<dt><h3><a name="odbGetAttrText">odbGetAttrText</a></h3>
+<dd>Get text <a href="#attributes">ODB attribute</a> value.<br>
+<pre><b>odbBOOL odbGetAttrText (</b>
+  <b>odbHANDLE</b> hCon,
+  <b>odbLONG</b>   lAttr,
+  <b>odbPSTR</b>   pszVal,
+  <b>odbULONG</b>  ulValLen
+<b>);</b></pre>
+</dd>
+<dt><h4>Parameters</h4>
+<dd><dl>
+<dt>hCon
+<dd>
+[in] Handle to a connection object.
+<br>&nbsp;</dd>
+<dt>lAttr
+<dd>
+[in] <a href="#attributes">ODB attribute</a>.
+<br>&nbsp;</dd>
+<dt>pszVal
+<dd>
+[out] Pointer to text buffer to store text attribute value.
+<br>&nbsp;</dd>
+<dt>ulValLen
+<dd>
+[in] Length of text buffer to store text value.
+</dd>
+</dl></dd>
+<dt><h4>Return Values</h4>
+<dd>
+Returns nonzero if the function is successful, otherwise returns zero if an error occurs.
+</dd>
+<dt><h4>Remarks</h4>
+<dd>
+Use this function to retrieve any <a href="#attributes">ODB attribute</a> whose value is a text string.
+<br>&nbsp;<br>
+</dd>
+<dt><h3><a name="odbGetConnection">odbGetConnection</a></h3>
+<dd>Get connection object associated with query object.<br>
+<pre><b>odbHANDLE odbGetConnection (</b>
+  <b>odbHANDLE</b> hQry
+<b>);</b></pre>
+</dd>
+<dt><h4>Parameters</h4>
+<dd><dl>
+<dt>hQry
+<dd>
+[in] Handle to a query object.
+</dd>
+</dl></dd>
+<dt><h4>Return Values</h4>
+<dd>
+Returns a handle to a connection object, or returns NULL if an error occurs.
+</dd>
+<dt><h4>Remarks</h4>
+<dd>
+This function returns the connection object that was used to allocate the specified query object with odbAllocate.
+<br>&nbsp;<br>
+</dd>
+<dt><h3><a name="odbGetConnectionId">odbGetConnectionId</a></h3>
+<dd>Get connection Id.<br>
+<pre><b>odbPCSTR odbGetConnectionId (</b>
+  <b>odbHANDLE</b> hCon
+<b>);</b></pre>
+</dd>
+<dt><h4>Parameters</h4>
+<dd><dl>
+<dt>hCon
+<dd>
+[in] Handle to a connection object.
+</dd>
+</dl></dd>
+<dt><h4>Return Values</h4>
+<dd>
+Returns a pointer to the retrieved connection id text, or returns NULL if an error occurs.
+</dd>
+<dt><h4>Remarks</h4>
+<dd>
+The Id of a connection object is assigned by the server.  Use this function to retrieve this value.  The value returned is a pointer to the ODBTP response, and will be invalid upon the next ODBTP request.   This value should be used as the database connection string when reconnecting to a reserved connection with <a href="#odbLogin">odbLogin</a>.
+<br>&nbsp;<br>
+</dd>
+<dt><h3><a name="odbGetError">odbGetError</a></h3>
+<dd>Get last error code.<br>
+<pre><b>odbULONG odbGetError (</b>
+  <b>odbHANDLE</b> hOdb
+<b>);</b></pre>
+</dd>
+<dt><h4>Parameters</h4>
+<dd><dl>
+<dt>hOdb
+<dd>
+[in] Handle to a connection or query object.
+</dd>
+</dl></dd>
+<dt><h4>Return Values</h4>
+<dd>
+Returns the numeric value of the current error.
+</dd>
+<dt><h4>Remarks</h4>
+<dd>
+This is the numerical value of the error generated by the last function.  If no error occurred, then this value is equal to 0.
+<br>&nbsp;<br>
+</dd>
+<dt><h3><a name="odbGetErrorText">odbGetErrorText</a></h3>
+<dd>Get last error text.<br>
+<pre><b>odbPCSTR odbGetErrorText (</b>
+  <b>odbHANDLE</b> hOdb
+<b>);</b></pre>
+</dd>
+<dt><h4>Parameters</h4>
+<dd><dl>
+<dt>hOdb
+<dd>
+[in] Handle to a connection or query object.
+</dd>
+</dl></dd>
+<dt><h4>Return Values</h4>
+<dd>
+Returns a pointer to the text corresponding to the current error.
+</dd>
+<dt><h4>Remarks</h4>
+<dd>
+This is the text value of the error generated by the last function.  If the numeric value of the error is ODBTPERR_SERVER, then the return value is a pointer to the ODBTP response.  If this is the case, then the value will be invalid upon the next ODBTP request.
+<br>&nbsp;<br>
+</dd>
+<dt><h3><a name="odbGetFirstQry">odbGetFirstQry</a></h3>
+<dd>Get first query object associated with connection object.<br>
+<pre><b>odbHANDLE odbGetFirstQry (</b>
+  <b>odbHANDLE</b> hCon
+<b>);</b></pre>
+</dd>
+<dt><h4>Parameters</h4>
+<dd><dl>
+<dt>hCon
+<dd>
+[in] Handle to a connection object.
+</dd>
+</dl></dd>
+<dt><h4>Return Values</h4>
+<dd>
+Returns the handle to the first query object allocated with connection object. It returns NULL if no query objects have been allocated or an error occurs.
+</dd>
+<dt><h4>Remarks</h4>
+<dd>
+Call this function to begin iterating the query objects associated with a connection object.  Call odbGetNextQry to obtain the remaining query objects.
+<br>&nbsp;<br>
+</dd>
+<dt><h3><a name="odbGetNextQry">odbGetNextQry</a></h3>
+<dd>Get next query object associated with connection object.<br>
+<pre><b>odbHANDLE odbGetNextQry (</b>
+  <b>odbHANDLE</b> hCon
+<b>);</b></pre>
+</dd>
+<dt><h4>Parameters</h4>
+<dd><dl>
+<dt>hCon
+<dd>
+[in] Handle to a connection object.
+</dd>
+</dl></dd>
+<dt><h4>Return Values</h4>
+<dd>
+Returns the handle to the next query object allocated with connection object. It returns NULL if there are no more allocated query objects or an error occurs.
+</dd>
+<dt><h4>Remarks</h4>
+<dd>
+After calling odbGetFirstQry, call this function to obtain the subsequent query objects associated with a connection object.
+<br>&nbsp;<br>
+</dd>
+<dt><h3><a name="odbGetOutputParams">odbGetOutputParams</a></h3>
+<dd>Get output parameter values.<br>
+<pre><b>odbBOOL odbGetOutputParams (</b>
+  <b>odbHANDLE</b> hQry
+<b>);</b></pre>
+</dd>
+<dt><h4>Parameters</h4>
+<dd><dl>
+<dt>hQry
+<dd>
+[in] Handle to a query object.
+</dd>
+</dl></dd>
+<dt><h4>Return Values</h4>
+<dd>
+Returns nonzero if the function is successful, otherwise returns zero if an error occurs.
+</dd>
+<dt><h4>Remarks</h4>
+<dd>
+This function is used to retrieve all output parameter data values from the server.  The parameter buffer is reinitialized, and the retrieved data is placed in the buffer.  To obtain the parameter data values, use odbParamData and/or its variants.
+<br>&nbsp;<br>
+</dd>
+<dt><h3><a name="odbGetParam">odbGetParam</a></h3>
+<dd>Get parameter value.<br>
+<pre><b>odbBOOL odbGetParam (</b>
+  <b>odbHANDLE</b> hQry,
+  <b>odbUSHORT</b> usParam,
+  <b>odbBOOL</b>   bFinal
+<b>);</b></pre>
+</dd>
+<dt><h4>Parameters</h4>
+<dd><dl>
+<dt>hQry
+<dd>
+[in] Handle to a query object.
+<br>&nbsp;</dd>
+<dt>usParam
+<dd>
+[in] Parameter number (1-based).
+<br>&nbsp;</dd>
+<dt>bFinal
+<dd>
+[in] Set to FALSE if more request data of the same type needs to be sent to server.  Set to TRUE if it is the final request data, upon which the server will send the response data.
+</dd>
+</dl></dd>
+<dt><h4>Return Values</h4>
+<dd>
+Returns nonzero if the function is successful, otherwise returns zero if an error occurs.
+</dd>
+<dt><h4>Remarks</h4>
+<dd>
+This function is used to retrieve any parameter data values from the server.  The parameter buffer is reinitialized upon the completion of this request, and the retrieved data is placed in the buffer.  To obtain the parameter data values, use odbParamData and/or its variants.
+<br>&nbsp;<br>
+</dd>
+<dt><h3><a name="odbGetQuery">odbGetQuery</a></h3>
+<dd>Get query object associated with connection object.<br>
+<pre><b>odbHANDLE odbGetQuery (</b>
+  <b>odbHANDLE</b> hCon,
+  <b>odbULONG</b>  ulQryId
+<b>);</b></pre>
+</dd>
+<dt><h4>Parameters</h4>
+<dd><dl>
+<dt>hCon
+<dd>
+[in] Handle to a connection object.
+<br>&nbsp;</dd>
+<dt>ulQryId
+<dd>
+[in] Id of query object.
+</dd>
+</dl></dd>
+<dt><h4>Return Values</h4>
+<dd>
+Returns the handle to the query object corresponding to the specified Id. It returns NULL if an error occurs.
+</dd>
+<dt><h4>Remarks</h4>
+<dd>
+This function is used to restore a query that is still being maintained by the server.  If a reserved connection is closed without disconnecting the database, the states of all open queries are maintained by the server. After reconnecting to the server with a reserved connection, call this function to allocate and reestablish the query object.
+<br>&nbsp;<br>
+</dd>
+<dt><h3><a name="odbGetQueryId">odbGetQueryId</a></h3>
+<dd>Get query Id.<br>
+<pre><b>odbULONG odbGetQueryId (</b>
+  <b>odbHANDLE</b> hQry
+<b>);</b></pre>
+</dd>
+<dt><h4>Parameters</h4>
+<dd><dl>
+<dt>hQry
+<dd>
+[in] Handle to a query object.
+</dd>
+</dl></dd>
+<dt><h4>Return Values</h4>
+<dd>
+Returns the query object's Id.  It returns 0xFFFFFFFF if an error occurs.
+</dd>
+<dt><h4>Remarks</h4>
+<dd>
+This value should be obtained if the associated query object needs to be reestablished after reconnecting to the server.  This is only useful when using reserved connections.
+<br>&nbsp;<br>
+</dd>
+<dt><h3><a name="odbGetResponse">odbGetResponse</a></h3>
+<dd>Get current response data.<br>
+<pre><b>odbPVOID odbGetResponse (</b>
+  <b>odbHANDLE</b> hOdb
+<b>);</b></pre>
+</dd>
+<dt><h4>Parameters</h4>
+<dd><dl>
+<dt>hOdb
+<dd>
+[in] Handle to a connection or query object.
+</dd>
+</dl></dd>
+<dt><h4>Return Values</h4>
+<dd>
+Returns a pointer to the buffer containing the current response data.
+</dd>
+<dt><h4>Remarks</h4>
+<dd>
+The value returned is a pointer to the current ODBTP response, and will be invalid upon the next ODBTP request.  Under normal circumstances, this function would never be called.
+<br>&nbsp;<br>
+</dd>
+<dt><h3><a name="odbGetResponseCode">odbGetResponseCode</a></h3>
+<dd>Get current response code.<br>
+<pre><b>odbULONG odbGetResponseCode (</b>
+  <b>odbHANDLE</b> hOdb
+<b>);</b></pre>
+</dd>
+<dt><h4>Parameters</h4>
+<dd><dl>
+<dt>hOdb
+<dd>
+[in] Handle to a connection or query object.
+</dd>
+</dl></dd>
+<dt><h4>Return Values</h4>
+<dd>
+Returns the current ODBTP response code.
+</dd>
+<dt><h4>Remarks</h4>
+<dd>
+The value returned is the current ODBTP response code,  Under normal circumstances, this function would never be called.
+<br>&nbsp;<br>
+</dd>
+<dt><h3><a name="odbGetResponseSize">odbGetResponseSize</a></h3>
+<dd>Get current response data size.<br>
+<pre><b>odbULONG odbGetResponseSize (</b>
+  <b>odbHANDLE</b> hOdb
+<b>);</b></pre>
+</dd>
+<dt><h4>Parameters</h4>
+<dd><dl>
+<dt>hOdb
+<dd>
+[in] Handle to a connection or query object.
+</dd>
+</dl></dd>
+<dt><h4>Return Values</h4>
+<dd>
+Returns the size of the current response data.
+</dd>
+<dt><h4>Remarks</h4>
+<dd>
+The value returned is the size in bytes of the current ODBTP response.  Under normal circumstances, this function would never be called.
+<br>&nbsp;<br>
+</dd>
+<dt><h3><a name="odbGetRowCacheSize">odbGetRowCacheSize</a></h3>
+<dd>Get current size of row cache.<br>
+<pre><b>odbULONG odbGetRowCacheSize (</b>
+  <b>odbHANDLE</b> hCon
+<b>);</b></pre>
+</dd>
+<dt><h4>Parameters</h4>
+<dd><dl>
+<dt>hCon
+<dd>
+[in] Handle to a connection object.
+</dd>
+</dl></dd>
+<dt><h4>Return Values</h4>
+<dd>
+Returns the maximum number rows that can be stored from a query's result set into its row cache. Returns 0xFFFFFFFF if an error occurs.
+</dd>
+<dt><h4>Remarks</h4>
+<dd>
+Gets the maximum number of rows that can be stored in the row cache of uery objects attached to the specified connection object.  This value is set when enabling row cache usage with <a href="#odbUseRowCache">odbUseRowCache</a>.
+<br>&nbsp;<br>
+</dd>
+<dt><h3><a name="odbGetRowCount">odbGetRowCount</a></h3>
+<dd>Get query result affected row count.<br>
+<pre><b>odbLONG odbGetRowCount (</b>
+  <b>odbHANDLE</b> hQry
+<b>);</b></pre>
+</dd>
+<dt><h4>Parameters</h4>
+<dd><dl>
+<dt>hQry
+<dd>
+[in] Handle to a query object.
+</dd>
+</dl></dd>
+<dt><h4>Return Values</h4>
+<dd>
+Returns the number of affected rows.  It returns 0 if there are no rows or an error occurs.
+</dd>
+<dt><h4>Remarks</h4>
+<dd>
+This value is normally valid after all rows have been fetched from a result set, or if the query does not generate a result set.
+<br>&nbsp;<br>
+</dd>
+<dt><h3><a name="odbGetRowStatus">odbGetRowStatus</a></h3>
+<dd>Get the <a href="#rowstatus">ODB row status</a> of the currently fetched query result row.<br>
+<pre><b>odbULONG odbGetRowStatus (</b>
+  <b>odbHANDLE</b> hQry
+<b>);</b></pre>
+</dd>
+<dt><h4>Parameters</h4>
+<dd><dl>
+<dt>hQry
+<dd>
+[in] Handle to a query object.
+</dd>
+</dl></dd>
+<dt><h4>Return Values</h4>
+<dd>
+Returns the <a href="#rowstatus">ODB row status</a> value.  It returns ODB_ROWSTAT_UNKNOWN if the status cannot be determined or an error occurs.
+</dd>
+<dt><h4>Remarks</h4>
+<dd>
+This function is used to obtain the status of a row in cursor-based result set.
+<br>&nbsp;<br>
+</dd>
+<dt><h3><a name="odbGetSockError">odbGetSockError</a></h3>
+<dd>Get last socket error code.<br>
+<pre><b>odbULONG odbGetSockError (</b>
+  <b>odbHANDLE</b> hOdb
+<b>);</b></pre>
+</dd>
+<dt><h4>Parameters</h4>
+<dd><dl>
+<dt>hOdb
+<dd>
+[in] Handle to a connection or query object.
+</dd>
+</dl></dd>
+<dt><h4>Return Values</h4>
+<dd>
+Returns the numeric value of the current socket error.
+</dd>
+<dt><h4>Remarks</h4>
+<dd>
+This is the system-specific numerical value of the socket error generated by the last function.  If no error occurred, then this value is equal to 0.
+<br>&nbsp;<br>
+</dd>
+<dt><h3><a name="odbGetSockErrorText">odbGetSockErrorText</a></h3>
+<dd>Get last socket error text.<br>
+<pre><b>odbPCSTR odbGetSockErrorText (</b>
+  <b>odbHANDLE</b> hOdb
+<b>);</b></pre>
+</dd>
+<dt><h4>Parameters</h4>
+<dd><dl>
+<dt>hOdb
+<dd>
+[in] Handle to a connection or query object.
+</dd>
+</dl></dd>
+<dt><h4>Return Values</h4>
+<dd>
+Returns a pointer to the text corresponding to the current socket error.
+</dd>
+<dt><h4>Remarks</h4>
+<dd>
+This is the text value of the socket error generated by the last function.
+<br>&nbsp;<br>
+</dd>
+<dt><h3><a name="odbGetTotalCols">odbGetTotalCols</a></h3>
+<dd>Get total query result columns.<br>
+<pre><b>odbUSHORT odbGetTotalCols (</b>
+  <b>odbHANDLE</b> hQry
+<b>);</b></pre>
+</dd>
+<dt><h4>Parameters</h4>
+<dd><dl>
+<dt>hQry
+<dd>
+[in] Handle to a query object.
+</dd>
+</dl></dd>
+<dt><h4>Return Values</h4>
+<dd>
+Returns the total number of result columns.  It returns 0 if there are no colums or an error occurs.
+</dd>
+<dt><h4>Remarks</h4>
+<dd>
+If a query generates a result set, the value returned by this function is the number of columns in the result set.  The value will be 0 if no result set is generated.
+<br>&nbsp;<br>
+</dd>
+<dt><h3><a name="odbGetTotalParams">odbGetTotalParams</a></h3>
+<dd>Get total prepared parameters.<br>
+<pre><b>odbUSHORT odbGetTotalParams (</b>
+  <b>odbHANDLE</b> hQry
+<b>);</b></pre>
+</dd>
+<dt><h4>Parameters</h4>
+<dd><dl>
+<dt>hQry
+<dd>
+[in] Handle to a query object.
+</dd>
+</dl></dd>
+<dt><h4>Return Values</h4>
+<dd>
+Returns the total number of prepared parameters.  It returns 0 if there are no parameters or an error occurs.
+</dd>
+<dt><h4>Remarks</h4>
+<dd>
+After preparing a query, call this function to determine the number of designated parameters.
+<br>&nbsp;<br>
+</dd>
+<dt><h3><a name="odbGetTotalRows">odbGetTotalRows</a></h3>
+<dd>Get total rows retrieved from query result.<br>
+<pre><b>odbLONG odbGetTotalRows (</b>
+  <b>odbHANDLE</b> hQry
+<b>);</b></pre>
+</dd>
+<dt><h4>Parameters</h4>
+<dd><dl>
+<dt>hQry
+<dd>
+[in] Handle to a query object.
+</dd>
+</dl></dd>
+<dt><h4>Return Values</h4>
+<dd>
+Returns the total rows retrieved from query result.  It returns 0 if there are no rows or an error occurs.
+</dd>
+<dt><h4>Remarks</h4>
+<dd>
+This function returns the cumulative retrieved row total when not using a cursor or row cache. It returns 0 if a cursor is being used, or the total rows stored into the cache after calling <a href="#odbFetchRowsIntoCache">odbFetchRowsIntoCache</a>.
+<br>&nbsp;<br>
+</dd>
+<dt><h3><a name="odbGetUserData">odbGetUserData</a></h3>
+<dd>Get user defined data.<br>
+<pre><b>odbPVOID odbGetUserData (</b>
+  <b>odbHANDLE</b> hOdb
+<b>);</b></pre>
+</dd>
+<dt><h4>Parameters</h4>
+<dd><dl>
+<dt>hOdb
+<dd>
+[in] Handle to a connection or query object.
+</dd>
+</dl></dd>
+<dt><h4>Return Values</h4>
+<dd>
+Returns a pointer to the user defined data.  It returns NULL if no data has been specified.
+</dd>
+<dt><h4>Remarks</h4>
+<dd>
+This function is used to retrieve user defined data that was previously set with odbSetUserData.
+<br>&nbsp;<br>
+</dd>
+<dt><h3><a name="odbGetUserDataLong">odbGetUserDataLong</a></h3>
+<dd>Get user defined data as long.<br>
+<pre><b>odbULONG odbGetUserDataLong (</b>
+  <b>odbHANDLE</b> hOdb
+<b>);</b></pre>
+</dd>
+<dt><h4>Parameters</h4>
+<dd><dl>
+<dt>hOdb
+<dd>
+[in] Handle to a connection or query object.
+</dd>
+</dl></dd>
+<dt><h4>Return Values</h4>
+<dd>
+Returns the user defined long data value.
+</dd>
+<dt><h4>Remarks</h4>
+<dd>
+This function is used to retrieve user defined data that was previously set with odbSetUserDataLong.
+<br>&nbsp;<br>
+</dd>
+<dt><h3><a name="odbGetVersion">odbGetVersion</a></h3>
+<dd>Get protocol version.<br>
+<pre><b>odbPCSTR odbGetVersion (</b>
+  <b>odbHANDLE</b> hCon
+<b>);</b></pre>
+</dd>
+<dt><h4>Parameters</h4>
+<dd><dl>
+<dt>hCon
+<dd>
+[in] Handle to a connection object.
+</dd>
+</dl></dd>
+<dt><h4>Return Values</h4>
+<dd>
+Returns a pointer to the protocol version text string, or returns NULL if an error occurs.
+</dd>
+<dt><h4>Remarks</h4>
+<dd>
+This function returns the ODBTP connection's protocol version.
+<br>&nbsp;<br>
+</dd>
+<dt><h3><a name="odbGotParam">odbGotParam</a></h3>
+<dd>Determine if parameter was retrieved.<br>
+<pre><b>odbBOOL odbGotParam (</b>
+  <b>odbHANDLE</b> hQry,
+  <b>odbUSHORT</b> usParam
+<b>);</b></pre>
+</dd>
+<dt><h4>Parameters</h4>
+<dd><dl>
+<dt>hQry
+<dd>
+[in] Handle to a query object.
+<br>&nbsp;</dd>
+<dt>usParam
+<dd>
+[in] Parameter number (1-based).
+</dd>
+</dl></dd>
+<dt><h4>Return Values</h4>
+<dd>
+Returns a nonzero value if the parameter was retrieved and can be read.
+</dd>
+<dt><h4>Remarks</h4>
+<dd>
+Use this function to determine whether or not the value of a parameter is in the parameter buffer.
+<br>&nbsp;<br>
+</dd>
+<dt><h3><a name="odbGuidToStr">odbGuidToStr</a></h3>
+<dd>Convert ODB GUID value to a GUID character string.<br>
+<pre><b>odbPSTR odbGuidToStr (</b>
+  <b>odbPSTR</b>  pszStr,
+  <b>odbPGUID</b> pguidVal
+<b>);</b></pre>
+</dd>
+<dt><h4>Parameters</h4>
+<dd><dl>
+<dt>pszStr
+<dd>
+[out] Pointer to character buffer whare GUID string will be stored.
+<br>&nbsp;</dd>
+<dt>pguidVal
+<dd>
+[in] Pointer to ODB GUID data to be converted to string.
+</dd>
+</dl></dd>
+<dt><h4>Return Values</h4>
+<dd>
+Returns the pointer to the character buffer containing the resulting GUID string.
+</dd>
+<dt><h4>Remarks</h4>
+<dd>
+Use this function to convert an ODB GUID value to a GUID character string in
+the form "XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX."
+<br>&nbsp;<br>
+</dd>
+<dt><h3><a name="odbIsConnected">odbIsConnected</a></h3>
+<dd>Determine if object is connected to an ODBTP server.<br>
+<pre><b>odbBOOL odbIsConnected (</b>
+  <b>odbHANDLE</b> hOdb
+<b>);</b></pre>
+</dd>
+<dt><h4>Parameters</h4>
+<dd><dl>
+<dt>hOdb
+<dd>
+[in] Handle to a connection or query object.
+</dd>
+</dl></dd>
+<dt><h4>Return Values</h4>
+<dd>
+Returns nonzero if specified object is connected to an ODBTP server.
+</dd>
+<dt><h4>Remarks</h4>
+<dd>
+This function is used to determine whether or not the specified object is still connected to an ODBTP server. If a disconnect response is received from the server, the connection will automatically be disconnected. This function is useful for situations where the state of an object's connection is uncertain.
+<br>&nbsp;<br>
+</dd>
+<dt><h3><a name="odbIsConnection">odbIsConnection</a></h3>
+<dd>Determine if object is a connection object.<br>
+<pre><b>odbBOOL odbIsConnection (</b>
+  <b>odbHANDLE</b> hOdb
+<b>);</b></pre>
+</dd>
+<dt><h4>Parameters</h4>
+<dd><dl>
+<dt>hOdb
+<dd>
+[in] Handle to a connection or query object.
+</dd>
+</dl></dd>
+<dt><h4>Return Values</h4>
+<dd>
+Returns nonzero if specified handle is a handle to a connection object.
+</dd>
+<dt><h4>Remarks</h4>
+<dd>
+This function is used to determine whether or not the specified handle is that of a connection object.
+<br>&nbsp;<br>
+</dd>
+<dt><h3><a name="odbIsTextAttr">odbIsTextAttr</a></h3>
+<dd>Determine if attribute's type is text.<br>
+<pre><b>odbBOOL odbIsTextAttr (</b>
+  <b>odbLONG</b> lAttr
+<b>);</b></pre>
+</dd>
+<dt><h4>Parameters</h4>
+<dd><dl>
+<dt>lAttr
+<dd>
+[in] <a href="#attributes">ODB attribute</a>.
+</dd>
+</dl></dd>
+<dt><h4>Return Values</h4>
+<dd>
+Returns TRUE if attribute's type is text, otherwise returns FALSE.
+</dd>
+<dt><h4>Remarks</h4>
+<dd>
+This function can be used to determine whether or not an <a href="#attributes">ODB attribute</a> is a text (string) attribute.
+<br>&nbsp;<br>
+</dd>
+<dt><h3><a name="odbIsUsingRowCache">odbIsUsingRowCache</a></h3>
+<dd>Determines if row cache usage has been enabled.<br>
+<pre><b>odbBOOL odbIsUsingRowCache (</b>
+  <b>odbHANDLE</b> hCon
+<b>);</b></pre>
+</dd>
+<dt><h4>Parameters</h4>
+<dd><dl>
+<dt>hCon
+<dd>
+[in] Handle to a connection object.
+</dd>
+</dl></dd>
+<dt><h4>Return Values</h4>
+<dd>
+Returns nonzero if row caching has been enabled, otherwise returns zero.
+</dd>
+<dt><h4>Remarks</h4>
+<dd>
+This function can be used to determine whether or not row cache usage has been enabled.  See <a href="#odbUseRowCache">odbUseRowCache</a> for more details.
+<br>&nbsp;<br>
+</dd>
+<dt><h3><a name="odbLoadDataTypes">odbLoadDataTypes</a></h3>
+<dd>Load data type information.<br>
+<pre><b>odbBOOL odbLoadDataTypes (</b>
+  <b>odbHANDLE</b> hCon
+<b>);</b></pre>
+</dd>
+<dt><h4>Parameters</h4>
+<dd><dl>
+<dt>hCon
+<dd>
+[in] Handle to a connection object.
+</dd>
+</dl></dd>
+<dt><h4>Return Values</h4>
+<dd>
+Returns nonzero if the function is successful, otherwise returns zero if an error occurs.
+</dd>
+<dt><h4>Remarks</h4>
+<dd>
+This function loads information about data types. The retrieved information will be used by <a href="#odbColSqlTypeName">odbColSqlTypeName</a>, <a href="#odbParamSqlTypeName">odbParamSqlTypeName</a> and <a href="#odbDescribeSqlType">odbDescribeSqlType</a>.
+<br>&nbsp;<br>
+</dd>
+<dt><h3><a name="odbLogin">odbLogin</a></h3>
+<dd>Login to database.<br>
+<pre><b>odbBOOL odbLogin (</b>
+  <b>odbHANDLE</b> hCon,
+  <b>odbPSTR</b>   pszServer,
+  <b>odbUSHORT</b> usPort,
+  <b>odbUSHORT</b> usType,
+  <b>odbPCSTR</b>  pszDbConnect
+<b>);</b></pre>
+</dd>
+<dt><h4>Parameters</h4>
+<dd><dl>
+<dt>hCon
+<dd>
+[in] Handle to a connection object.
+<br>&nbsp;</dd>
+<dt>pszServer
+<dd>
+[in] ODBTP Server hostname or IP address.
+<br>&nbsp;</dd>
+<dt>usPort
+<dd>
+[in] ODBTP server port number.  This value is normally set to 2799.
+<br>&nbsp;</dd>
+<dt>usType
+<dd>
+[in] <a href="#logintypes">ODB login type</a>.
+<br>&nbsp;</dd>
+<dt>pszDbConnect
+<dd>
+[in] Database (ODBC) connect string.
+</dd>
+</dl></dd>
+<dt><h4>Return Values</h4>
+<dd>
+Returns nonzero if the function is successful, otherwise returns zero if an error occurs.
+</dd>
+<dt><h4>Remarks</h4>
+<dd>
+This function is used to establish a connection to an ODBTP server.  After successfully connecting to the server, the DB connect string will be used by the server to login to the desired database. The DB connect string is either an ODBC connection string or the Id of a reserved connection.
+<br>&nbsp;<br>
+</dd>
+<dt><h3><a name="odbLoginInterface">odbLoginInterface</a></h3>
+<dd>Login to database using an interface file.<br>
+<pre><b>odbBOOL odbLoginInterface (</b>
+  <b>odbHANDLE</b> hCon,
+  <b>odbPSTR</b>   pszFile,
+  <b>odbPCSTR</b>  pszInterface,
+  <b>odbPCSTR</b>  pszUsername,
+  <b>odbPCSTR</b>  pszPassword,
+  <b>odbPCSTR</b>  pszDatabase,
+  <b>odbUSHORT</b> usType
+<b>);</b></pre>
+</dd>
+<dt><h4>Parameters</h4>
+<dd><dl>
+<dt>hCon
+<dd>
+[in] Handle to a connection object.
+<br>&nbsp;</dd>
+<dt>pszFile
+<dd>
+[in] File path name of file containing interfaces.
+<br>&nbsp;</dd>
+<dt>pszInterface
+<dd>
+[in] Name of interface to be used.
+<br>&nbsp;</dd>
+<dt>pszUsername
+<dd>
+[in] Username to be used if authentication is required for interface.
+<br>&nbsp;</dd>
+<dt>pszPassword
+<dd>
+[in] Password to be used if authentication is required for interface.
+<br>&nbsp;</dd>
+<dt>pszDatabase
+<dd>
+[in] Database to be accessed via the interface     .
+<br>&nbsp;</dd>
+<dt>usType
+<dd>
+[in] <a href="#logintypes">ODB login type</a>.
+</dd>
+</dl></dd>
+<dt><h4>Return Values</h4>
+<dd>
+Returns nonzero if the function is successful, otherwise returns zero if an error occurs.
+</dd>
+<dt><h4>Remarks</h4>
+<dd>
+This function is used to establish a connection to an ODBTP server using an <a href="interface.html">interface file</a>.
+<br>&nbsp;<br>
+</dd>
+<dt><h3><a name="odbLogout">odbLogout</a></h3>
+<dd>Logout from database.<br>
+<pre><b>odbBOOL odbLogout (</b>
+  <b>odbHANDLE</b> hCon,
+  <b>odbBOOL</b>   bDisconnectDb
+<b>);</b></pre>
+</dd>
+<dt><h4>Parameters</h4>
+<dd><dl>
+<dt>hCon
+<dd>
+[in] Handle to a connection object.
+<br>&nbsp;</dd>
+<dt>bDisconnectDb
+<dd>
+[in] Set` to TRUE to disconnect database, otherwise set to FALSE so that database connection can be reused.
+</dd>
+</dl></dd>
+<dt><h4>Return Values</h4>
+<dd>
+Returns nonzero if the function is successful, otherwise returns zero if an error occurs.
+</dd>
+<dt><h4>Remarks</h4>
+<dd>
+This function is used to close the connection to an ODBTP server.  If bDisconnectDb is set to FALSE, the server will maintain its connection to the database.  When closing a reserved connection, set this value to TRUE if it is no longer necessary for the server to maintain its connection to the database.
+<br>&nbsp;<br>
+</dd>
+<dt><h3><a name="odbLongLongToStr">odbLongLongToStr</a></h3>
+<dd>Convert long long (64-bit integer) value to numeric text string.<br>
+<pre><b>odbPSTR odbLongLongToStr (</b>
+  <b>odbLONGLONG</b> llVal,
+  <b>odbPSTR</b>     pszStrEnd
+<b>);</b></pre>
+</dd>
+<dt><h4>Parameters</h4>
+<dd><dl>
+<dt>llVal
+<dd>
+[in] Long long value to be converted.
+<br>&nbsp;</dd>
+<dt>pszStrEnd
+<dd>
+[out] Pointer to end of text string buffer in which converted value will be placed.
+</dd>
+</dl></dd>
+<dt><h4>Return Values</h4>
+<dd>
+Pointer to the numeric text string resulting from the conversion.
+</dd>
+<dt><h4>Remarks</h4>
+<dd>
+The size of the string buffer must be large enough to store the required number of characters needed to represent the long long value and a null terminator.
+<br>&nbsp;<br>
+</dd>
+<dt><h3><a name="odbNoData">odbNoData</a></h3>
+<dd>Determine if data was fetched.<br>
+<pre><b>odbBOOL odbNoData (</b>
+  <b>odbHANDLE</b> hQry
+<b>);</b></pre>
+</dd>
+<dt><h4>Parameters</h4>
+<dd><dl>
+<dt>hQry
+<dd>
+[in] Handle to a query object.
+</dd>
+</dl></dd>
+<dt><h4>Return Values</h4>
+<dd>
+Returns nonzero if no data was fetched by a row or result fetch.
+</dd>
+<dt><h4>Remarks</h4>
+<dd>
+After executing a query, fetching a row, or fetching a result, call this function to determine whether or not any data was returned.
+<br>&nbsp;<br>
+</dd>
+<dt><h3><a name="odbParamActualLen">odbParamActualLen</a></h3>
+<dd>Obtain actual length of retrieved parameter.<br>
+<pre><b>odbLONG odbParamActualLen (</b>
+  <b>odbHANDLE</b> hQry,
+  <b>odbUSHORT</b> usParam
+<b>);</b></pre>
+</dd>
+<dt><h4>Parameters</h4>
+<dd><dl>
+<dt>hQry
+<dd>
+[in] Handle to a query object.
+<br>&nbsp;</dd>
+<dt>usParam
+<dd>
+[in] Parameter number (1-based).
+</dd>
+</dl></dd>
+<dt><h4>Return Values</h4>
+<dd>
+Returns the actual length of the parameter data.
+</dd>
+<dt><h4>Remarks</h4>
+<dd>
+This function can  be used to determine the actual length of a truncated parameter.
+<br>&nbsp;<br>
+</dd>
+<dt><h3><a name="odbParamData">odbParamData</a></h3>
+<dd>Obtain retrieved parameter data.<br>
+<pre><b>odbPVOID odbParamData (</b>
+  <b>odbHANDLE</b> hQry,
+  <b>odbUSHORT</b> usParam
+<b>);</b></pre>
+</dd>
+<dt><h4>Parameters</h4>
+<dd><dl>
+<dt>hQry
+<dd>
+[in] Handle to a query object.
+<br>&nbsp;</dd>
+<dt>usParam
+<dd>
+[in] Parameter number (1-based).
+</dd>
+</dl></dd>
+<dt><h4>Return Values</h4>
+<dd>
+Returns a pointer to the parameter data.  Note, that while NULL is a legitimate return value, it will also be returned if an error occurs.
+</dd>
+<dt><h4>Remarks</h4>
+<dd>
+This function is used to obtain the data from a parameter regardless of the <a href="#datatypes">ODB data type</a> to which it is bound.  The returned value is a pointer to data stored in the parameter buffer, and will be invalid if the buffer is reinitialized.
+<br>&nbsp;<br>
+</dd>
+<dt><h3><a name="odbParamDataByte">odbParamDataByte</a></h3>
+<dd>Obtain retrieved parameter data as byte.<br>
+<pre><b>odbBYTE odbParamDataByte (</b>
+  <b>odbHANDLE</b> hQry,
+  <b>odbUSHORT</b> usParam
+<b>);</b></pre>
+</dd>
+<dt><h4>Parameters</h4>
+<dd><dl>
+<dt>hQry
+<dd>
+[in] Handle to a query object.
+<br>&nbsp;</dd>
+<dt>usParam
+<dd>
+[in] Parameter number (1-based).
+</dd>
+</dl></dd>
+<dt><h4>Return Values</h4>
+<dd>
+Returns the byte value of the parameter.  Note, that while 0 is a legitimate return value, it will also be returned if the parameter value is NULL or an error occurs.
+</dd>
+<dt><h4>Remarks</h4>
+<dd>
+This function should be used to obtain data from parameters bound to <a href="#datatypes">ODB data types</a> ODB_BIT, ODB_TINYINT or ODB_UTINYINT.
+<br>&nbsp;<br>
+</dd>
+<dt><h3><a name="odbParamDataDouble">odbParamDataDouble</a></h3>
+<dd>Obtain retrieved parameter data as double.<br>
+<pre><b>odbDOUBLE odbParamDataDouble (</b>
+  <b>odbHANDLE</b> hQry,
+  <b>odbUSHORT</b> usParam
+<b>);</b></pre>
+</dd>
+<dt><h4>Parameters</h4>
+<dd><dl>
+<dt>hQry
+<dd>
+[in] Handle to a query object.
+<br>&nbsp;</dd>
+<dt>usParam
+<dd>
+[in] Parameter number (1-based).
+</dd>
+</dl></dd>
+<dt><h4>Return Values</h4>
+<dd>
+Returns the double value of the parameter.  Note, that while 0.0 is a legitimate return value, it will also be returned if the parameter value is NULL or an error occurs.
+</dd>
+<dt><h4>Remarks</h4>
+<dd>
+This function should be used to obtain data from parameters bound to <a href="#datatypes">ODB data type</a> ODB_DOUBLE.
+<br>&nbsp;<br>
+</dd>
+<dt><h3><a name="odbParamDataFloat">odbParamDataFloat</a></h3>
+<dd>Obtain retrieved parameter data as float.<br>
+<pre><b>odbFLOAT odbParamDataFloat (</b>
+  <b>odbHANDLE</b> hQry,
+  <b>odbUSHORT</b> usParam
+<b>);</b></pre>
+</dd>
+<dt><h4>Parameters</h4>
+<dd><dl>
+<dt>hQry
+<dd>
+[in] Handle to a query object.
+<br>&nbsp;</dd>
+<dt>usParam
+<dd>
+[in] Parameter number (1-based).
+</dd>
+</dl></dd>
+<dt><h4>Return Values</h4>
+<dd>
+Returns the float value of the parameter.  Note, that while 0.0 is a legitimate return value, it will also be returned if the parameter value is NULL or an error occurs.
+</dd>
+<dt><h4>Remarks</h4>
+<dd>
+This function should be used to obtain data from parameters bound to <a href="#datatypes">ODB data type</a> ODB_REAL.
+<br>&nbsp;<br>
+</dd>
+<dt><h3><a name="odbParamDataLen">odbParamDataLen</a></h3>
+<dd>Obtain retrieved parameter data length.<br>
+<pre><b>odbLONG odbParamDataLen (</b>
+  <b>odbHANDLE</b> hQry,
+  <b>odbUSHORT</b> usParam
+<b>);</b></pre>
+</dd>
+<dt><h4>Parameters</h4>
+<dd><dl>
+<dt>hQry
+<dd>
+[in] Handle to a query object.
+<br>&nbsp;</dd>
+<dt>usParam
+<dd>
+[in] Parameter number (1-based).
+</dd>
+</dl></dd>
+<dt><h4>Return Values</h4>
+<dd>
+Returns the byte length of the parameter data.  It will return ODB_NULL if the parameter value is NULL or an error occurs.
+</dd>
+<dt><h4>Remarks</h4>
+<dd>
+This function is usually used to determine whether or not a parameter's data value is NULL.  If the value of a parameter is NULL, then the data length is equal to ODB_NULL.
+<br>&nbsp;<br>
+</dd>
+<dt><h3><a name="odbParamDataLong">odbParamDataLong</a></h3>
+<dd>Obtain retrieved parameter data as long.<br>
+<pre><b>odbULONG odbParamDataLong (</b>
+  <b>odbHANDLE</b> hQry,
+  <b>odbUSHORT</b> usParam
+<b>);</b></pre>
+</dd>
+<dt><h4>Parameters</h4>
+<dd><dl>
+<dt>hQry
+<dd>
+[in] Handle to a query object.
+<br>&nbsp;</dd>
+<dt>usParam
+<dd>
+[in] Parameter number (1-based).
+</dd>
+</dl></dd>
+<dt><h4>Return Values</h4>
+<dd>
+Returns the long value of the parameter.  Note, that while 0 is a legitimate return value, it will also be returned if the parameter value is NULL or an error occurs.
+</dd>
+<dt><h4>Remarks</h4>
+<dd>
+This function should be used to obtain data from parameters bound to <a href="#datatypes">ODB data types</a> ODB_INT or ODB_UINT.
+<br>&nbsp;<br>
+</dd>
+<dt><h3><a name="odbParamDataLongLong">odbParamDataLongLong</a></h3>
+<dd>Obtain retrieved parameter data as long long (64-bit integer).<br>
+<pre><b>odbULONGLONG odbParamDataLongLong (</b>
+  <b>odbHANDLE</b> hQry,
+  <b>odbUSHORT</b> usParam
+<b>);</b></pre>
+</dd>
+<dt><h4>Parameters</h4>
+<dd><dl>
+<dt>hQry
+<dd>
+[in] Handle to a query object.
+<br>&nbsp;</dd>
+<dt>usParam
+<dd>
+[in] Parameter number (1-based).
+</dd>
+</dl></dd>
+<dt><h4>Return Values</h4>
+<dd>
+Returns the long long value of the parameter.  Note, that while 0 is a legitimate return value, it will also be returned if the parameter value is NULL or an error occurs.
+</dd>
+<dt><h4>Remarks</h4>
+<dd>
+This function should be used to obtain data from parameters bound to <a href="#datatypes">ODB data types</a> ODB_BIGINT or ODB_UBIGINT.
+<br>&nbsp;<br>
+</dd>
+<dt><h3><a name="odbParamDataShort">odbParamDataShort</a></h3>
+<dd>Obtain retrieved parameter data as short.<br>
+<pre><b>odbUSHORT odbParamDataShort (</b>
+  <b>odbHANDLE</b> hQry,
+  <b>odbUSHORT</b> usParam
+<b>);</b></pre>
+</dd>
+<dt><h4>Parameters</h4>
+<dd><dl>
+<dt>hQry
+<dd>
+[in] Handle to a query object.
+<br>&nbsp;</dd>
+<dt>usParam
+<dd>
+[in] Parameter number (1-based).
+</dd>
+</dl></dd>
+<dt><h4>Return Values</h4>
+<dd>
+Returns the short value of the parameter.  Note, that while 0 is a legitimate return value, it will also be returned if the parameter value is NULL or an error occurs.
+</dd>
+<dt><h4>Remarks</h4>
+<dd>
+This function should be used to obtain data from parameters bound to <a href="#datatypes">ODB data types</a> ODB_SMALLINT or ODB_USMALLINT.
+<br>&nbsp;<br>
+</dd>
+<dt><h3><a name="odbParamDataText">odbParamDataText</a></h3>
+<dd>Obtain retrieved parameter data as text.<br>
+<pre><b>odbPSTR odbParamDataText (</b>
+  <b>odbHANDLE</b> hQry,
+  <b>odbUSHORT</b> usParam
+<b>);</b></pre>
+</dd>
+<dt><h4>Parameters</h4>
+<dd><dl>
+<dt>hQry
+<dd>
+[in] Handle to a query object.
+<br>&nbsp;</dd>
+<dt>usParam
+<dd>
+[in] Parameter number (1-based).
+</dd>
+</dl></dd>
+<dt><h4>Return Values</h4>
+<dd>
+Returns a pointer to the text value of the parameter.  Note, that while a pointer to zero length text ("") is a legitimate return value, it will also be returned if the parameter value is NULL or an error occurs.
+</dd>
+<dt><h4>Remarks</h4>
+<dd>
+This function should be used to obtain data from parameters bound to <a href="#datatypes">ODB data types</a> ODB_CHAR or ODB_WCHAR.  The returned value is a pointer to data stored in the parameter buffer, and will be invalid if the buffer is reinitialized.
+<br>&nbsp;<br>
+</dd>
+<dt><h3><a name="odbParamDataTimestamp">odbParamDataTimestamp</a></h3>
+<dd>Obtain retrieved parameter data as ODB timestamp.<br>
+<pre><b>odbPTIMESTAMP odbParamDataTimestamp (</b>
+  <b>odbHANDLE</b> hQry,
+  <b>odbUSHORT</b> usParam
+<b>);</b></pre>
+</dd>
+<dt><h4>Parameters</h4>
+<dd><dl>
+<dt>hQry
+<dd>
+[in] Handle to a query object.
+<br>&nbsp;</dd>
+<dt>usParam
+<dd>
+[in] Parameter number (1-based).
+</dd>
+</dl></dd>
+<dt><h4>Return Values</h4>
+<dd>
+Returns a pointer to the ODB timestamp value of the parameter.  Note, a zeroed ODB timestamp will be returned if the parameter value is NULL or an error occurs.
+</dd>
+<dt><h4>Remarks</h4>
+<dd>
+This function should be used to obtain data from parameters bound to <a href="#datatypes">ODB data type</a> ODB_DATETIME.  The returned value is a pointer to data stored in the parameter buffer, and will be invalid if the buffer is reinitialized.
+<br>&nbsp;<br>
+</dd>
+<dt><h3><a name="odbParamDataType">odbParamDataType</a></h3>
+<dd>Get parameter data type.<br>
+<pre><b>odbSHORT odbParamDataType (</b>
+  <b>odbHANDLE</b> hQry,
+  <b>odbUSHORT</b> usParam
+<b>);</b></pre>
+</dd>
+<dt><h4>Parameters</h4>
+<dd><dl>
+<dt>hQry
+<dd>
+[in] Handle to a query object.
+<br>&nbsp;</dd>
+<dt>usParam
+<dd>
+[in] Parameter number (1-based).
+</dd>
+</dl></dd>
+<dt><h4>Return Values</h4>
+<dd>
+Returns the parameter's <a href="#datatypes">ODB data type</a> or 0 if an error occurs.
+</dd>
+<dt><h4>Remarks</h4>
+<dd>
+This function is used to determine the <a href="#datatypes">ODB data type</a> to which a parameter is bound.
+<br>&nbsp;<br>
+</dd>
+<dt><h3><a name="odbParamDecDigits">odbParamDecDigits</a></h3>
+<dd>Get decimal digits or precision of parameter.<br>
+<pre><b>odbSHORT odbParamDecDigits (</b>
+  <b>odbHANDLE</b> hQry,
+  <b>odbUSHORT</b> usParam
+<b>);</b></pre>
+</dd>
+<dt><h4>Parameters</h4>
+<dd><dl>
+<dt>hQry
+<dd>
+[in] Handle to a query object.
+<br>&nbsp;</dd>
+<dt>usParam
+<dd>
+[in] Parameter number (1-based).
+</dd>
+</dl></dd>
+<dt><h4>Return Values</h4>
+<dd>
+Returns the parameter's decimal digits.
+</dd>
+<dt><h4>Remarks</h4>
+<dd>
+This function is used to determine a parameter's decimal digits or precision.
+<br>&nbsp;<br>
+</dd>
+<dt><h3><a name="odbParamDefaultDataType">odbParamDefaultDataType</a></h3>
+<dd>Get parameter default data type.<br>
+<pre><b>odbSHORT odbParamDefaultDataType (</b>
+  <b>odbHANDLE</b> hQry,
+  <b>odbUSHORT</b> usParam
+<b>);</b></pre>
+</dd>
+<dt><h4>Parameters</h4>
+<dd><dl>
+<dt>hQry
+<dd>
+[in] Handle to a query object.
+<br>&nbsp;</dd>
+<dt>usParam
+<dd>
+[in] Parameter number (1-based).
+</dd>
+</dl></dd>
+<dt><h4>Return Values</h4>
+<dd>
+Returns the parameter's default <a href="#datatypes">ODB data type</a>, or 0 if an error occurs.
+</dd>
+<dt><h4>Remarks</h4>
+<dd>
+This is the <a href="#datatypes">ODB data type</a> that will be used if it is not explicitly specified when calling odbBindParam, odbBindInputParam, odbBindInOutParam, or odbBindOutputParam.
+<br>&nbsp;<br>
+</dd>
+<dt><h3><a name="odbParamName">odbParamName</a></h3>
+<dd>Get parameter name.<br>
+<pre><b>odbPCSTR odbParamName (</b>
+  <b>odbHANDLE</b> hQry,
+  <b>odbUSHORT</b> usParam
+<b>);</b></pre>
+</dd>
+<dt><h4>Parameters</h4>
+<dd><dl>
+<dt>hQry
+<dd>
+[in] Handle to a query object.
+<br>&nbsp;</dd>
+<dt>usParam
+<dd>
+[in] Parameter number (1-based).
+</dd>
+</dl></dd>
+<dt><h4>Return Values</h4>
+<dd>
+Returns a pointer to the parameter name text, or returns NULL if an error occurs.
+</dd>
+<dt><h4>Remarks</h4>
+<dd>
+Call this function to get the name of a parameter.  The returned value is a pointer to data stored in the parameter info buffer, and will be invalid if the buffer is reinitialized.
+<br>&nbsp;<br>
+</dd>
+<dt><h3><a name="odbParamNum">odbParamNum</a></h3>
+<dd>Get parameter number corresponding to name.<br>
+<pre><b>odbUSHORT odbParamNum (</b>
+  <b>odbHANDLE</b> hQry,
+  <b>odbPCSTR</b>  pszName
+<b>);</b></pre>
+</dd>
+<dt><h4>Parameters</h4>
+<dd><dl>
+<dt>hQry
+<dd>
+[in] Handle to a query object.
+<br>&nbsp;</dd>
+<dt>pszName
+<dd>
+[in] Name of parameter.
+</dd>
+</dl></dd>
+<dt><h4>Return Values</h4>
+<dd>
+Returns parameter number corresponding to the specified name, or returns 0 if an error occurs.
+</dd>
+<dt><h4>Remarks</h4>
+<dd>
+Call this function to get the parameter number corresponding to a parameter name.
+<br>&nbsp;<br>
+</dd>
+<dt><h3><a name="odbParamSize">odbParamSize</a></h3>
+<dd>Get parameter size.<br>
+<pre><b>odbULONG odbParamSize (</b>
+  <b>odbHANDLE</b> hQry,
+  <b>odbUSHORT</b> usParam
+<b>);</b></pre>
+</dd>
+<dt><h4>Parameters</h4>
+<dd><dl>
+<dt>hQry
+<dd>
+[in] Handle to a query object.
+<br>&nbsp;</dd>
+<dt>usParam
+<dd>
+[in] Parameter number (1-based).
+</dd>
+</dl></dd>
+<dt><h4>Return Values</h4>
+<dd>
+Returns the max character size of the parameter, or returns 0 if an error occurs.
+</dd>
+<dt><h4>Remarks</h4>
+<dd>
+This value is the maximum character size of the parameter if it is bound to the <a href="#datatypes">ODB data type</a> ODB_CHAR.
+<br>&nbsp;<br>
+</dd>
+<dt><h3><a name="odbParamSqlType">odbParamSqlType</a></h3>
+<dd>Get SQL type of parameter.<br>
+<pre><b>odbSHORT odbParamSqlType (</b>
+  <b>odbHANDLE</b> hQry,
+  <b>odbUSHORT</b> usParam
+<b>);</b></pre>
+</dd>
+<dt><h4>Parameters</h4>
+<dd><dl>
+<dt>hQry
+<dd>
+[in] Handle to a query object.
+<br>&nbsp;</dd>
+<dt>usParam
+<dd>
+[in] Parameter number (1-based).
+</dd>
+</dl></dd>
+<dt><h4>Return Values</h4>
+<dd>
+Returns the parameter's SQL type.  The returned value is a pointer to data stored in the parameter info buffer, and will be invalid if the buffer is reinitialized.
+</dd>
+<dt><h4>Remarks</h4>
+<dd>
+This function is used to determine a parameter's SQL type.
+<br>&nbsp;<br>
+</dd>
+<dt><h3><a name="odbParamSqlTypeName">odbParamSqlTypeName</a></h3>
+<dd>Get SQL type name of parameter.<br>
+<pre><b>odbSHORT odbParamSqlTypeName (</b>
+  <b>odbHANDLE</b> hQry,
+  <b>odbUSHORT</b> usParam
+<b>);</b></pre>
+</dd>
+<dt><h4>Parameters</h4>
+<dd><dl>
+<dt>hQry
+<dd>
+[in] Handle to a query object.
+<br>&nbsp;</dd>
+<dt>usParam
+<dd>
+[in] Parameter number (1-based).
+</dd>
+</dl></dd>
+<dt><h4>Return Values</h4>
+<dd>
+Returns the parameter's SQL type name.
+</dd>
+<dt><h4>Remarks</h4>
+<dd>
+This function is used to determine a parameter's SQL type name.
+<br>&nbsp;<br>
+</dd>
+<dt><h3><a name="odbParamTruncated">odbParamTruncated</a></h3>
+<dd>Determine if parameter was truncated.<br>
+<pre><b>odbBOOL odbParamTruncated (</b>
+  <b>odbHANDLE</b> hQry,
+  <b>odbUSHORT</b> usParam
+<b>);</b></pre>
+</dd>
+<dt><h4>Parameters</h4>
+<dd><dl>
+<dt>hQry
+<dd>
+[in] Handle to a query object.
+<br>&nbsp;</dd>
+<dt>usParam
+<dd>
+[in] Parameter number (1-based).
+</dd>
+</dl></dd>
+<dt><h4>Return Values</h4>
+<dd>
+Returns non-zero if parameter data was truncated.
+</dd>
+<dt><h4>Remarks</h4>
+<dd>
+Use this function to determine if a parameter's data was truncated.
+<br>&nbsp;<br>
+</dd>
+<dt><h3><a name="odbParamType">odbParamType</a></h3>
+<dd>Get parameter type.<br>
+<pre><b>odbUSHORT odbParamType (</b>
+  <b>odbHANDLE</b> hQry,
+  <b>odbUSHORT</b> usParam
+<b>);</b></pre>
+</dd>
+<dt><h4>Parameters</h4>
+<dd><dl>
+<dt>hQry
+<dd>
+[in] Handle to a query object.
+<br>&nbsp;</dd>
+<dt>usParam
+<dd>
+[in] Parameter number (1-based).
+</dd>
+</dl></dd>
+<dt><h4>Return Values</h4>
+<dd>
+Returns the parameter's <a href="#paramtypes">ODB parameter type</a>. It will return ODB_PARAM_NONE if parameter has not been bound or an error occurs.
+</dd>
+<dt><h4>Remarks</h4>
+<dd>
+This is the <a href="#paramtypes">ODB parameter type</a> that was specified when the parameter was bound to an <a href="#datatypes">ODB data type</a>.
+<br>&nbsp;<br>
+</dd>
+<dt><h3><a name="odbParamUserData">odbParamUserData</a></h3>
+<dd>Get parameter's user defined data.<br>
+<pre><b>odbPVOID odbParamUserData (</b>
+  <b>odbHANDLE</b> hQry,
+  <b>odbUSHORT</b> usParam
+<b>);</b></pre>
+</dd>
+<dt><h4>Parameters</h4>
+<dd><dl>
+<dt>hQry
+<dd>
+[in] Handle to a query object.
+<br>&nbsp;</dd>
+<dt>usParam
+<dd>
+[in] Parameter number (1-based).
+</dd>
+</dl></dd>
+<dt><h4>Return Values</h4>
+<dd>
+Returns the pointer representing the parameter's user defined data.
+</dd>
+<dt><h4>Remarks</h4>
+<dd>
+This function is used to return a parameter's user defined data.  Use <a href="#odbSetParamUserData">odbSetParamUserData</a> to assign user defined data for a parameter.
+<br>&nbsp;<br>
+</dd>
+<dt><h3><a name="odbPrepare">odbPrepare</a></h3>
+<dd>Prepare a parameterized query for later execution.<br>
+<pre><b>odbBOOL odbPrepare (</b>
+  <b>odbHANDLE</b> hQry,
+  <b>odbPCSTR</b>  pszSQL
+<b>);</b></pre>
+</dd>
+<dt><h4>Parameters</h4>
+<dd><dl>
+<dt>hQry
+<dd>
+[in] Handle to a query object.
+<br>&nbsp;</dd>
+<dt>pszSQL
+<dd>
+[in] SQL (Query) string to be prepared for later execution.
+</dd>
+</dl></dd>
+<dt><h4>Return Values</h4>
+<dd>
+Returns nonzero if the function is successful, otherwise returns zero if an error occurs.
+</dd>
+<dt><h4>Remarks</h4>
+<dd>
+This function is used to prepare a query for later execution.  This function reinitializes the parameter, parameter info, column, and row buffers.  If the prepared query contains parameters, the corresponding parameter info is stored in the parameter info buffer.  All parameters must be bound prior to executing the query with odbExecute.
+<br>&nbsp;<br>
+</dd>
+<dt><h3><a name="odbPrepareProc">odbPrepareProc</a></h3>
+<dd>Prepare a stored procedure for later execution.<br>
+<pre><b>odbBOOL odbPrepareProc (</b>
+  <b>odbHANDLE</b> hQry,
+  <b>odbPCSTR</b>  pszProcedure
+<b>);</b></pre>
+</dd>
+<dt><h4>Parameters</h4>
+<dd><dl>
+<dt>hQry
+<dd>
+[in] Handle to a query object.
+<br>&nbsp;</dd>
+<dt>pszProcedure
+<dd>
+[in] Name of procedure to be prepared for later execution.
+</dd>
+</dl></dd>
+<dt><h4>Return Values</h4>
+<dd>
+Returns nonzero if the function is successful, otherwise returns zero if an error occurs.
+</dd>
+<dt><h4>Remarks</h4>
+<dd>
+This function is used to prepare a stored procedure for later execution.  This function reinitializes the parameter, parameter info, column, and row buffers.  All parameters, if any, are automatically binded, and all input parameters are set to use their default values. Use odbExecute to execute the procedure.
+<br>&nbsp;<br>
+</dd>
+<dt><h3><a name="odbRollback">odbRollback</a></h3>
+<dd>Rollback current transaction.<br>
+<pre><b>odbBOOL odbRollback (</b>
+  <b>odbHANDLE</b> hCon
+<b>);</b></pre>
+</dd>
+<dt><h4>Parameters</h4>
+<dd><dl>
+<dt>hCon
+<dd>
+[in] Handle to a connection object.
+</dd>
+</dl></dd>
+<dt><h4>Return Values</h4>
+<dd>
+Returns nonzero if the function is successful, otherwise returns zero if an error occurs.
+</dd>
+<dt><h4>Remarks</h4>
+<dd>
+If transactions have been enabled, call this function to rollback any transactions since the last commit or rollback.  Transactions are enabled by setting the <a href="#attributes">ODB attribute</a> ODB_ATTR_TRANSACTIONS to a value other than ODB_TXN_NONE.
+<br>&nbsp;<br>
+</dd>
+<dt><h3><a name="odbRowAdd">odbRowAdd</a></h3>
+<dd>Add row to query result set.<br>
+<pre><b>odbBOOL odbRowAdd (</b>
+  <b>odbHANDLE</b> hQry
+<b>);</b></pre>
+</dd>
+<dt><h4>Parameters</h4>
+<dd><dl>
+<dt>hQry
+<dd>
+[in] Handle to a query object.
+</dd>
+</dl></dd>
+<dt><h4>Return Values</h4>
+<dd>
+Returns nonzero if the function is successful, otherwise returns zero if an error occurs.
+</dd>
+<dt><h4>Remarks</h4>
+<dd>
+When using a keyset or dynamic cursor, this function can be used to add a new row to the result set.
+<br>&nbsp;<br>
+</dd>
+<dt><h3><a name="odbRowBookmark">odbRowBookmark</a></h3>
+<dd>Bookmark currently fetched query result row.<br>
+<pre><b>odbBOOL odbRowBookmark (</b>
+  <b>odbHANDLE</b> hQry
+<b>);</b></pre>
+</dd>
+<dt><h4>Parameters</h4>
+<dd><dl>
+<dt>hQry
+<dd>
+[in] Handle to a query object.
+</dd>
+</dl></dd>
+<dt><h4>Return Values</h4>
+<dd>
+Returns nonzero if the function is successful, otherwise returns zero if an error occurs.
+</dd>
+<dt><h4>Remarks</h4>
+<dd>
+When using a static, keyset or dynamic cursor, this function can be used to bookmark the currently fetched row.  This function requires bookmarks support to be enabled when calling odbSetCursor.
+<br>&nbsp;<br>
+</dd>
+<dt><h3><a name="odbRowDelete">odbRowDelete</a></h3>
+<dd>Delete currently fetched query result row.<br>
+<pre><b>odbBOOL odbRowDelete (</b>
+  <b>odbHANDLE</b> hQry
+<b>);</b></pre>
+</dd>
+<dt><h4>Parameters</h4>
+<dd><dl>
+<dt>hQry
+<dd>
+[in] Handle to a query object.
+</dd>
+</dl></dd>
+<dt><h4>Return Values</h4>
+<dd>
+Returns nonzero if the function is successful, otherwise returns zero if an error occurs.
+</dd>
+<dt><h4>Remarks</h4>
+<dd>
+When using a keyset or dynamic cursor, this function can be used to delete the currently fetched row.
+<br>&nbsp;<br>
+</dd>
+<dt><h3><a name="odbRowLock">odbRowLock</a></h3>
+<dd>Lock currently fetched query result row.<br>
+<pre><b>odbBOOL odbRowLock (</b>
+  <b>odbHANDLE</b> hQry
+<b>);</b></pre>
+</dd>
+<dt><h4>Parameters</h4>
+<dd><dl>
+<dt>hQry
+<dd>
+[in] Handle to a query object.
+</dd>
+</dl></dd>
+<dt><h4>Return Values</h4>
+<dd>
+Returns nonzero if the function is successful, otherwise returns zero if an error occurs.
+</dd>
+<dt><h4>Remarks</h4>
+<dd>
+When using a keyset or dynamic cursor, this function can be used to lock the currently fetched row.
+<br>&nbsp;<br>
+</dd>
+<dt><h3><a name="odbRowRefresh">odbRowRefresh</a></h3>
+<dd>Refresh currently fetched query result row.<br>
+<pre><b>odbBOOL odbRowRefresh (</b>
+  <b>odbHANDLE</b> hQry
+<b>);</b></pre>
+</dd>
+<dt><h4>Parameters</h4>
+<dd><dl>
+<dt>hQry
+<dd>
+[in] Handle to a query object.
+</dd>
+</dl></dd>
+<dt><h4>Return Values</h4>
+<dd>
+Returns nonzero if the function is successful, otherwise returns zero if an error occurs.
+</dd>
+<dt><h4>Remarks</h4>
+<dd>
+When using a static, keyset or dynamic cursor, this function can be used to refresh the currently fetched row.
+<br>&nbsp;<br>
+</dd>
+<dt><h3><a name="odbRowUnlock">odbRowUnlock</a></h3>
+<dd>Unlock currently fetched query result row.<br>
+<pre><b>odbBOOL odbRowUnlock (</b>
+  <b>odbHANDLE</b> hQry
+<b>);</b></pre>
+</dd>
+<dt><h4>Parameters</h4>
+<dd><dl>
+<dt>hQry
+<dd>
+[in] Handle to a query object.
+</dd>
+</dl></dd>
+<dt><h4>Return Values</h4>
+<dd>
+Returns nonzero if the function is successful, otherwise returns zero if an error occurs.
+</dd>
+<dt><h4>Remarks</h4>
+<dd>
+When using a keyset or dynamic cursor, this function can be used to unlock the currently fetched row.
+<br>&nbsp;<br>
+</dd>
+<dt><h3><a name="odbRowUpdate">odbRowUpdate</a></h3>
+<dd>Update currently fetched query result row.<br>
+<pre><b>odbBOOL odbRowUpdate (</b>
+  <b>odbHANDLE</b> hQry
+<b>);</b></pre>
+</dd>
+<dt><h4>Parameters</h4>
+<dd><dl>
+<dt>hQry
+<dd>
+[in] Handle to a query object.
+</dd>
+</dl></dd>
+<dt><h4>Return Values</h4>
+<dd>
+Returns nonzero if the function is successful, otherwise returns zero if an error occurs.
+</dd>
+<dt><h4>Remarks</h4>
+<dd>
+When using a keyset or dynamic cursor, this function can be used to update the currently fetched row.
+<br>&nbsp;<br>
+</dd>
+<dt><h3><a name="odbSeekRow">odbSeekRow</a></h3>
+<dd>Seek a cached row.<br>
+<pre><b>odbBOOL odbSeekRow (</b>
+  <b>odbHANDLE</b> hQry,
+  <b>odbLONG</b>   lRow
+<b>);</b></pre>
+</dd>
+<dt><h4>Parameters</h4>
+<dd><dl>
+<dt>hQry
+<dd>
+[in] Handle to a query object.
+<br>&nbsp;</dd>
+<dt>lRow
+<dd>
+[in] Row to be seeked.
+</dd>
+</dl></dd>
+<dt><h4>Return Values</h4>
+<dd>
+Returns nonzero if the function is successful, otherwise returns zero if an error occurs.
+</dd>
+<dt><h4>Remarks</h4>
+<dd>
+If a row cache is being used, this function can be used to seek to a row that can subsequently be fetched from the cache.
+<br>&nbsp;<br>
+</dd>
+<dt><h3><a name="odbSetAttrLong">odbSetAttrLong</a></h3>
+<dd>Set long <a href="#attributes">ODB attribute</a> value.<br>
+<pre><b>odbBOOL odbSetAttrLong (</b>
+  <b>odbHANDLE</b> hCon,
+  <b>odbLONG</b>   lAttr,
+  <b>odbULONG</b>  ulVal
+<b>);</b></pre>
+</dd>
+<dt><h4>Parameters</h4>
+<dd><dl>
+<dt>hCon
+<dd>
+[in] Handle to a connection object.
+<br>&nbsp;</dd>
+<dt>lAttr
+<dd>
+[in] <a href="#attributes">ODB attribute</a>.
+<br>&nbsp;</dd>
+<dt>ulVal
+<dd>
+[in] Long value to which attribute will be set.
+</dd>
+</dl></dd>
+<dt><h4>Return Values</h4>
+<dd>
+Returns nonzero if the function is successful, otherwise returns zero if an error occurs.
+</dd>
+<dt><h4>Remarks</h4>
+<dd>
+Use this function to set any <a href="#attributes">ODB attribute</a> whose value is a number.
+<br>&nbsp;<br>
+</dd>
+<dt><h3><a name="odbSetAttrText">odbSetAttrText</a></h3>
+<dd>Set text <a href="#attributes">ODB attribute</a> value.<br>
+<pre><b>odbBOOL odbSetAttrText (</b>
+  <b>odbHANDLE</b> hCon,
+  <b>odbLONG</b>   lAttr,
+  <b>odbPCSTR</b>  pszVal
+<b>);</b></pre>
+</dd>
+<dt><h4>Parameters</h4>
+<dd><dl>
+<dt>hCon
+<dd>
+[in] Handle to a connection object.
+<br>&nbsp;</dd>
+<dt>lAttr
+<dd>
+[in] <a href="#attributes">ODB attribute</a>.
+<br>&nbsp;</dd>
+<dt>pszVal
+<dd>
+[out] Pointer to text buffer containing value to which attribute will be set.
+</dd>
+</dl></dd>
+<dt><h4>Return Values</h4>
+<dd>
+Returns nonzero if the function is successful, otherwise returns zero if an error occurs.
+</dd>
+<dt><h4>Remarks</h4>
+<dd>
+Use this function to set any <a href="#attributes">ODB attribute</a> whose value is a text string.
+<br>&nbsp;<br>
+</dd>
+<dt><h3><a name="odbSetCol">odbSetCol</a></h3>
+<dd>Set result column to data value.<br>
+<pre><b>odbBOOL odbSetCol (</b>
+  <b>odbHANDLE</b> hQry,
+  <b>odbUSHORT</b> usCol,
+  <b>odbPVOID</b>  pData,
+  <b>odbLONG</b>   lDataLen,
+  <b>odbBOOL</b>   bFinal
+<b>);</b></pre>
+</dd>
+<dt><h4>Parameters</h4>
+<dd><dl>
+<dt>hQry
+<dd>
+[in] Handle to a query object.
+<br>&nbsp;</dd>
+<dt>usCol
+<dd>
+[in] Column number (1-based).
+<br>&nbsp;</dd>
+<dt>pData
+<dd>
+[in] Pointer to data to which column will be set.
+<br>&nbsp;</dd>
+<dt>lDataLen
+<dd>
+[in] Length of data.  Set this value to 0 if column is bound to a fixed length data type.
+<br>&nbsp;</dd>
+<dt>bFinal
+<dd>
+[in] Set to FALSE if more request data of the same type needs to be sent to server.  Set to TRUE if it is the final request data, upon which the server will send the response data.
+</dd>
+</dl></dd>
+<dt><h4>Return Values</h4>
+<dd>
+Returns nonzero if the function is successful, otherwise returns zero if an error occurs.
+</dd>
+<dt><h4>Remarks</h4>
+<dd>
+This function is used to set the value of a column regardless of the <a href="#datatypes">ODB data type</a> to which it is bound.  Only the column data on the server is changed.  Call odbFetchRowReread to update the data on the client.
+<br>&nbsp;<br>
+</dd>
+<dt><h3><a name="odbSetColByte">odbSetColByte</a></h3>
+<dd>Set result column to byte value.<br>
+<pre><b>odbBOOL odbSetColByte (</b>
+  <b>odbHANDLE</b> hQry,
+  <b>odbUSHORT</b> usCol,
+  <b>odbBYTE</b>   byData,
+  <b>odbBOOL</b>   bFinal
+<b>);</b></pre>
+</dd>
+<dt><h4>Parameters</h4>
+<dd><dl>
+<dt>hQry
+<dd>
+[in] Handle to a query object.
+<br>&nbsp;</dd>
+<dt>usCol
+<dd>
+[in] Column number (1-based).
+<br>&nbsp;</dd>
+<dt>byData
+<dd>
+[in] Byte value to which column will be set.
+<br>&nbsp;</dd>
+<dt>bFinal
+<dd>
+[in] Set to FALSE if more request data of the same type needs to be sent to server.  Set to TRUE if it is the final request data, upon which the server will send the response data.
+</dd>
+</dl></dd>
+<dt><h4>Return Values</h4>
+<dd>
+Returns nonzero if the function is successful, otherwise returns zero if an error occurs.
+</dd>
+<dt><h4>Remarks</h4>
+<dd>
+This function should be used to set the value of columns bound to <a href="#datatypes">ODB data types</a> ODB_BIT, ODB_TINYINT or ODB_UTINYINT.  Only the column data on the server is changed.  Call odbFetchRowReread to update the data on the client.
+<br>&nbsp;<br>
+</dd>
+<dt><h3><a name="odbSetColDouble">odbSetColDouble</a></h3>
+<dd>Set result column to double value.<br>
+<pre><b>odbBOOL odbSetColDouble (</b>
+  <b>odbHANDLE</b> hQry,
+  <b>odbUSHORT</b> usCol,
+  <b>odbDOUBLE</b> dData,
+  <b>odbBOOL</b>   bFinal
+<b>);</b></pre>
+</dd>
+<dt><h4>Parameters</h4>
+<dd><dl>
+<dt>hQry
+<dd>
+[in] Handle to a query object.
+<br>&nbsp;</dd>
+<dt>usCol
+<dd>
+[in] Column number (1-based).
+<br>&nbsp;</dd>
+<dt>dData
+<dd>
+[in] Double value to which column will be set.
+<br>&nbsp;</dd>
+<dt>bFinal
+<dd>
+[in] Set to FALSE if more request data of the same type needs to be sent to server.  Set to TRUE if it is the final request data, upon which the server will send the response data.
+</dd>
+</dl></dd>
+<dt><h4>Return Values</h4>
+<dd>
+Returns nonzero if the function is successful, otherwise returns zero if an error occurs.
+</dd>
+<dt><h4>Remarks</h4>
+<dd>
+This function should be used to set the value of columns bound to <a href="#datatypes">ODB data type</a> ODB_DOUBLE.  Only the column data on the server is changed.  Call odbFetchRowReread to update the data on the client.
+<br>&nbsp;<br>
+</dd>
+<dt><h3><a name="odbSetColFloat">odbSetColFloat</a></h3>
+<dd>Set result column to float value.<br>
+<pre><b>odbBOOL odbSetColFloat (</b>
+  <b>odbHANDLE</b> hQry,
+  <b>odbUSHORT</b> usCol,
+  <b>odbFLOAT</b>  fData,
+  <b>odbBOOL</b>   bFinal
+<b>);</b></pre>
+</dd>
+<dt><h4>Parameters</h4>
+<dd><dl>
+<dt>hQry
+<dd>
+[in] Handle to a query object.
+<br>&nbsp;</dd>
+<dt>usCol
+<dd>
+[in] Column number (1-based).
+<br>&nbsp;</dd>
+<dt>fData
+<dd>
+[in] Float value to which column will be set.
+<br>&nbsp;</dd>
+<dt>bFinal
+<dd>
+[in] Set to FALSE if more request data of the same type needs to be sent to server.  Set to TRUE if it is the final request data, upon which the server will send the response data.
+</dd>
+</dl></dd>
+<dt><h4>Return Values</h4>
+<dd>
+Returns nonzero if the function is successful, otherwise returns zero if an error occurs.
+</dd>
+<dt><h4>Remarks</h4>
+<dd>
+This function should be used to set the value of columns bound to <a href="#datatypes">ODB data type</a> ODB_REAL.  Only the column data on the server is changed.  Call odbFetchRowReread to update the data on the client.
+<br>&nbsp;<br>
+</dd>
+<dt><h3><a name="odbSetColIgnore">odbSetColIgnore</a></h3>
+<dd>Set result column value to be ignored.<br>
+<pre><b>odbBOOL odbSetColIgnore (</b>
+  <b>odbHANDLE</b> hQry,
+  <b>odbUSHORT</b> usCol,
+  <b>odbBOOL</b>   bFinal
+<b>);</b></pre>
+</dd>
+<dt><h4>Parameters</h4>
+<dd><dl>
+<dt>hQry
+<dd>
+[in] Handle to a query object.
+<br>&nbsp;</dd>
+<dt>usCol
+<dd>
+[in] Column number (1-based).
+<br>&nbsp;</dd>
+<dt>bFinal
+<dd>
+[in] Set to FALSE if more request data of the same type needs to be sent to server.  Set to TRUE if it is the final request data, upon which the server will send the response data.
+</dd>
+</dl></dd>
+<dt><h4>Return Values</h4>
+<dd>
+Returns nonzero if the function is successful, otherwise returns zero if an error occurs.
+</dd>
+<dt><h4>Remarks</h4>
+<dd>
+This function is used to tell the server to ignore a column when performing a row update or add.
+<br>&nbsp;<br>
+</dd>
+<dt><h3><a name="odbSetColLong">odbSetColLong</a></h3>
+<dd>Set result column to long value.<br>
+<pre><b>odbBOOL odbSetColLong (</b>
+  <b>odbHANDLE</b> hQry,
+  <b>odbUSHORT</b> usCol,
+  <b>odbULONG</b>  ulData,
+  <b>odbBOOL</b>   bFinal
+<b>);</b></pre>
+</dd>
+<dt><h4>Parameters</h4>
+<dd><dl>
+<dt>hQry
+<dd>
+[in] Handle to a query object.
+<br>&nbsp;</dd>
+<dt>usCol
+<dd>
+[in] Column number (1-based).
+<br>&nbsp;</dd>
+<dt>ulData
+<dd>
+[in] Long value to which column will be set.
+<br>&nbsp;</dd>
+<dt>bFinal
+<dd>
+[in] Set to FALSE if more request data of the same type needs to be sent to server.  Set to TRUE if it is the final request data, upon which the server will send the response data.
+</dd>
+</dl></dd>
+<dt><h4>Return Values</h4>
+<dd>
+Returns nonzero if the function is successful, otherwise returns zero if an error occurs.
+</dd>
+<dt><h4>Remarks</h4>
+<dd>
+This function should be used to set the value of columns bound to <a href="#datatypes">ODB data types</a> ODB_INT or ODB_UINT.  Only the column data on the server is changed.  Call odbFetchRowReread to update the data on the client.
+<br>&nbsp;<br>
+</dd>
+<dt><h3><a name="odbSetColLongLong">odbSetColLongLong</a></h3>
+<dd>Set result column to long long (64-bit integer) value.<br>
+<pre><b>odbBOOL odbSetColLongLong (</b>
+  <b>odbHANDLE</b>    hQry,
+  <b>odbUSHORT</b>    usCol,
+  <b>odbULONGLONG</b> ullData,
+  <b>odbBOOL</b>      bFinal
+<b>);</b></pre>
+</dd>
+<dt><h4>Parameters</h4>
+<dd><dl>
+<dt>hQry
+<dd>
+[in] Handle to a query object.
+<br>&nbsp;</dd>
+<dt>usCol
+<dd>
+[in] Column number (1-based).
+<br>&nbsp;</dd>
+<dt>ullData
+<dd>
+[in] Long long value to which column will be set.
+<br>&nbsp;</dd>
+<dt>bFinal
+<dd>
+[in] Set to FALSE if more request data of the same type needs to be sent to server.  Set to TRUE if it is the final request data, upon which the server will send the response data.
+</dd>
+</dl></dd>
+<dt><h4>Return Values</h4>
+<dd>
+Returns nonzero if the function is successful, otherwise returns zero if an error occurs.
+</dd>
+<dt><h4>Remarks</h4>
+<dd>
+This function should be used to set the value of columns bound to <a href="#datatypes">ODB data types</a> ODB_BIGINT or ODB_UBIGINT.  Only the column data on the server is changed.  Call odbFetchRowReread to update the data on the client.
+<br>&nbsp;<br>
+</dd>
+<dt><h3><a name="odbSetColNull">odbSetColNull</a></h3>
+<dd>Set result column value to NULL.<br>
+<pre><b>odbBOOL odbSetColNull (</b>
+  <b>odbHANDLE</b> hQry,
+  <b>odbUSHORT</b> usCol,
+  <b>odbBOOL</b>   bFinal
+<b>);</b></pre>
+</dd>
+<dt><h4>Parameters</h4>
+<dd><dl>
+<dt>hQry
+<dd>
+[in] Handle to a query object.
+<br>&nbsp;</dd>
+<dt>usCol
+<dd>
+[in] Column number (1-based).
+<br>&nbsp;</dd>
+<dt>bFinal
+<dd>
+[in] Set to FALSE if more request data of the same type needs to be sent to server.  Set to TRUE if it is the final request data, upon which the server will send the response data.
+</dd>
+</dl></dd>
+<dt><h4>Return Values</h4>
+<dd>
+Returns nonzero if the function is successful, otherwise returns zero if an error occurs.
+</dd>
+<dt><h4>Remarks</h4>
+<dd>
+This function is used to set the value of a column to NULL.  Only the column data on the server is changed.  Call odbFetchRowReread to update the data on the client.
+<br>&nbsp;<br>
+</dd>
+<dt><h3><a name="odbSetColShort">odbSetColShort</a></h3>
+<dd>Set result column to short value.<br>
+<pre><b>odbBOOL odbSetColShort (</b>
+  <b>odbHANDLE</b> hQry,
+  <b>odbUSHORT</b> usCol,
+  <b>odbUSHORT</b> usData,
+  <b>odbBOOL</b>   bFinal
+<b>);</b></pre>
+</dd>
+<dt><h4>Parameters</h4>
+<dd><dl>
+<dt>hQry
+<dd>
+[in] Handle to a query object.
+<br>&nbsp;</dd>
+<dt>usCol
+<dd>
+[in] Column number (1-based).
+<br>&nbsp;</dd>
+<dt>usData
+<dd>
+[in] Short value to which column will be set.
+<br>&nbsp;</dd>
+<dt>bFinal
+<dd>
+[in] Set to FALSE if more request data of the same type needs to be sent to server.  Set to TRUE if it is the final request data, upon which the server will send the response data.
+</dd>
+</dl></dd>
+<dt><h4>Return Values</h4>
+<dd>
+Returns nonzero if the function is successful, otherwise returns zero if an error occurs.
+</dd>
+<dt><h4>Remarks</h4>
+<dd>
+This function should be used to set the value of columns bound to <a href="#datatypes">ODB data types</a> ODB_SMALLINT or ODB_USMALLINT.  Only the column data on the server is changed.  Call odbFetchRowReread to update the data on the client.
+<br>&nbsp;<br>
+</dd>
+<dt><h3><a name="odbSetColText">odbSetColText</a></h3>
+<dd>Set result column to text value.<br>
+<pre><b>odbBOOL odbSetColText (</b>
+  <b>odbHANDLE</b> hQry,
+  <b>odbUSHORT</b> usCol,
+  <b>odbPCSTR</b>  pszData,
+  <b>odbBOOL</b>   bFinal
+<b>);</b></pre>
+</dd>
+<dt><h4>Parameters</h4>
+<dd><dl>
+<dt>hQry
+<dd>
+[in] Handle to a query object.
+<br>&nbsp;</dd>
+<dt>usCol
+<dd>
+[in] Column number (1-based).
+<br>&nbsp;</dd>
+<dt>pszData
+<dd>
+[in] Pointer to text value to which column will be set.
+<br>&nbsp;</dd>
+<dt>bFinal
+<dd>
+[in] Set to FALSE if more request data of the same type needs to be sent to server.  Set to TRUE if it is the final request data, upon which the server will send the response data.
+</dd>
+</dl></dd>
+<dt><h4>Return Values</h4>
+<dd>
+Returns nonzero if the function is successful, otherwise returns zero if an error occurs.
+</dd>
+<dt><h4>Remarks</h4>
+<dd>
+This function should be used to set the value of columns bound to <a href="#datatypes">ODB data types</a> ODB_CHAR or ODB_WCHAR.  Only the column data on the server is changed.  Call odbFetchRowReread to update the data on the client.
+<br>&nbsp;<br>
+</dd>
+<dt><h3><a name="odbSetColTimestamp">odbSetColTimestamp</a></h3>
+<dd>Set result column to ODB timestamp value.<br>
+<pre><b>odbBOOL odbSetColTimestamp (</b>
+  <b>odbHANDLE</b>     hQry,
+  <b>odbUSHORT</b>     usCol,
+  <b>odbPTIMESTAMP</b> ptsData,
+  <b>odbBOOL</b>       bFinal
+<b>);</b></pre>
+</dd>
+<dt><h4>Parameters</h4>
+<dd><dl>
+<dt>hQry
+<dd>
+[in] Handle to a query object.
+<br>&nbsp;</dd>
+<dt>usCol
+<dd>
+[in] Column number (1-based).
+<br>&nbsp;</dd>
+<dt>ptsData
+<dd>
+[in] Pointer to ODB timestamp value to which column will be set.
+<br>&nbsp;</dd>
+<dt>bFinal
+<dd>
+[in] Set to FALSE if more request data of the same type needs to be sent to server.  Set to TRUE if it is the final request data, upon which the server will send the response data.
+</dd>
+</dl></dd>
+<dt><h4>Return Values</h4>
+<dd>
+Returns nonzero if the function is successful, otherwise returns zero if an error occurs.
+</dd>
+<dt><h4>Remarks</h4>
+<dd>
+This function should be used to set the value of columns bound to <a href="#datatypes">ODB data type</a> ODB_DATETIME.  Only the column data on the server is changed.  Call odbFetchRowReread to update the data on the client.
+<br>&nbsp;<br>
+</dd>
+<dt><h3><a name="odbSetColUserData">odbSetColUserData</a></h3>
+<dd>Set column's user defined data.<br>
+<pre><b>odbBOOL odbSetColUserData (</b>
+  <b>odbHANDLE</b> hQry,
+  <b>odbUSHORT</b> usCol,
+  <b>odbPVOID</b>  pVal
+<b>);</b></pre>
+</dd>
+<dt><h4>Parameters</h4>
+<dd><dl>
+<dt>hQry
+<dd>
+[in] Handle to a query object.
+<br>&nbsp;</dd>
+<dt>usCol
+<dd>
+[in] Column number (1-based).
+<br>&nbsp;</dd>
+<dt>pVal
+<dd>
+[in] Pointer to user defined data value.
+</dd>
+</dl></dd>
+<dt><h4>Return Values</h4>
+<dd>
+Returns nonzero if the function is successful, otherwise returns zero if an error occurs.
+</dd>
+<dt><h4>Remarks</h4>
+<dd>
+This function is used to associate user defined data with a column.  Use <a href="#odbColUserData">odbColUserData</a> to retrieve the data.
+<br>&nbsp;<br>
+</dd>
+<dt><h3><a name="odbSetConnectTimeout">odbSetConnectTimeout</a></h3>
+<dd>Set connection timeout.<br>
+<pre><b>odbULONG odbSetConnectTimeout (</b>
+  <b>odbHANDLE</b> hOdb,
+  <b>odbULONG</b>  ulTimeout
+<b>);</b></pre>
+</dd>
+<dt><h4>Parameters</h4>
+<dd><dl>
+<dt>hOdb
+<dd>
+[in] Handle to a connection or query object.
+<br>&nbsp;</dd>
+<dt>ulTimeout
+<dd>
+[in] Timeout in seconds.
+</dd>
+</dl></dd>
+<dt><h4>Return Values</h4>
+<dd>
+Returns the previous timeout value.
+</dd>
+<dt><h4>Remarks</h4>
+<dd>
+Use this function change the timeout for connecting to an ODBTP server.  This value pertains only to the time when connecting to the server, and not when connecting to the database.
+<br>&nbsp;<br>
+</dd>
+<dt><h3><a name="odbSetCursor">odbSetCursor</a></h3>
+<dd>Set cursor type.<br>
+<pre><b>odbBOOL odbSetCursor (</b>
+  <b>odbHANDLE</b> hQry,
+  <b>odbUSHORT</b> usType,
+  <b>odbUSHORT</b> usConcurrency,
+  <b>odbBOOL</b>   bEnableBookmarks
+<b>);</b></pre>
+</dd>
+<dt><h4>Parameters</h4>
+<dd><dl>
+<dt>hQry
+<dd>
+[in] Handle to a query object.
+<br>&nbsp;</dd>
+<dt>usType
+<dd>
+[in] <a href="#cursortypes">ODB cursor type</a>.
+<br>&nbsp;</dd>
+<dt>usConcurrency
+<dd>
+[in] <a href="#concurtypes">ODB cursor concurrency type</a>.
+<br>&nbsp;</dd>
+<dt>bEnableBookmarks
+<dd>
+[in] Set` to TRUE to enable bookmark support, otherwise set to FALSE if this feature is not desired.
+</dd>
+</dl></dd>
+<dt><h4>Return Values</h4>
+<dd>
+Returns nonzero if the function is successful, otherwise returns zero if an error occurs.
+</dd>
+<dt><h4>Remarks</h4>
+<dd>
+Use this function to enable the use of cursors when executing queries that generate a  result set. Cursor support and capabilities are dependent on the underlying ODBC driver for the database.
+<br>&nbsp;<br>
+</dd>
+<dt><h3><a name="odbSetParam">odbSetParam</a></h3>
+<dd>Set prepared parameter to data value.<br>
+<pre><b>odbBOOL odbSetParam (</b>
+  <b>odbHANDLE</b> hQry,
+  <b>odbUSHORT</b> usParam,
+  <b>odbPVOID</b>  pData,
+  <b>odbLONG</b>   lDataLen,
+  <b>odbBOOL</b>   bFinal
+<b>);</b></pre>
+</dd>
+<dt><h4>Parameters</h4>
+<dd><dl>
+<dt>hQry
+<dd>
+[in] Handle to a query object.
+<br>&nbsp;</dd>
+<dt>usParam
+<dd>
+[in] Parameter number (1-based).
+<br>&nbsp;</dd>
+<dt>pData
+<dd>
+[in] Pointer to data to which parameter will be set.
+<br>&nbsp;</dd>
+<dt>lDataLen
+<dd>
+[in] Length of data.  Set this value to 0 if parameter is bound to a fixed length data type.
+<br>&nbsp;</dd>
+<dt>bFinal
+<dd>
+[in] Set to FALSE if more request data of the same type needs to be sent to server.  Set to TRUE if it is the final request data, upon which the server will send the response data.
+</dd>
+</dl></dd>
+<dt><h4>Return Values</h4>
+<dd>
+Returns nonzero if the function is successful, otherwise returns zero if an error occurs.
+</dd>
+<dt><h4>Remarks</h4>
+<dd>
+This function is used to set the value of a parameter regardless of the <a href="#datatypes">ODB data type</a> to which it is bound.
+<br>&nbsp;<br>
+</dd>
+<dt><h3><a name="odbSetParamByte">odbSetParamByte</a></h3>
+<dd>Set prepared parameter to byte value.<br>
+<pre><b>odbBOOL odbSetParamByte (</b>
+  <b>odbHANDLE</b> hQry,
+  <b>odbUSHORT</b> usParam,
+  <b>odbBYTE</b>   byData,
+  <b>odbBOOL</b>   bFinal
+<b>);</b></pre>
+</dd>
+<dt><h4>Parameters</h4>
+<dd><dl>
+<dt>hQry
+<dd>
+[in] Handle to a query object.
+<br>&nbsp;</dd>
+<dt>usParam
+<dd>
+[in] Parameter number (1-based).
+<br>&nbsp;</dd>
+<dt>byData
+<dd>
+[in] Byte value to which parameter will be set.
+<br>&nbsp;</dd>
+<dt>bFinal
+<dd>
+[in] Set to FALSE if more request data of the same type needs to be sent to server.  Set to TRUE if it is the final request data, upon which the server will send the response data.
+</dd>
+</dl></dd>
+<dt><h4>Return Values</h4>
+<dd>
+Returns nonzero if the function is successful, otherwise returns zero if an error occurs.
+</dd>
+<dt><h4>Remarks</h4>
+<dd>
+This function should be used to set the value of parameters bound to <a href="#datatypes">ODB data types</a> ODB_BIT, ODB_TINYINT or ODB_UTINYINT.
+<br>&nbsp;<br>
+</dd>
+<dt><h3><a name="odbSetParamDefault">odbSetParamDefault</a></h3>
+<dd>Set prepared parameter to default value.<br>
+<pre><b>odbBOOL odbSetParamDefault (</b>
+  <b>odbHANDLE</b> hQry,
+  <b>odbUSHORT</b> usParam,
+  <b>odbBOOL</b>   bFinal
+<b>);</b></pre>
+</dd>
+<dt><h4>Parameters</h4>
+<dd><dl>
+<dt>hQry
+<dd>
+[in] Handle to a query object.
+<br>&nbsp;</dd>
+<dt>usParam
+<dd>
+[in] Parameter number (1-based).
+<br>&nbsp;</dd>
+<dt>bFinal
+<dd>
+[in] Set to FALSE if more request data of the same type needs to be sent to server.  Set to TRUE if it is the final request data, upon which the server will send the response data.
+</dd>
+</dl></dd>
+<dt><h4>Return Values</h4>
+<dd>
+Returns nonzero if the function is successful, otherwise returns zero if an error occurs.
+</dd>
+<dt><h4>Remarks</h4>
+<dd>
+This function is used to tell the server to use a parameter's default value when executing a prepared query.
+<br>&nbsp;<br>
+</dd>
+<dt><h3><a name="odbSetParamDouble">odbSetParamDouble</a></h3>
+<dd>Set prepared parameter to double value.<br>
+<pre><b>odbBOOL odbSetParamDouble (</b>
+  <b>odbHANDLE</b> hQry,
+  <b>odbUSHORT</b> usParam,
+  <b>odbDOUBLE</b> dData,
+  <b>odbBOOL</b>   bFinal
+<b>);</b></pre>
+</dd>
+<dt><h4>Parameters</h4>
+<dd><dl>
+<dt>hQry
+<dd>
+[in] Handle to a query object.
+<br>&nbsp;</dd>
+<dt>usParam
+<dd>
+[in] Parameter number (1-based).
+<br>&nbsp;</dd>
+<dt>dData
+<dd>
+[in] Double value to which parameter will be set.
+<br>&nbsp;</dd>
+<dt>bFinal
+<dd>
+[in] Set to FALSE if more request data of the same type needs to be sent to server.  Set to TRUE if it is the final request data, upon which the server will send the response data.
+</dd>
+</dl></dd>
+<dt><h4>Return Values</h4>
+<dd>
+Returns nonzero if the function is successful, otherwise returns zero if an error occurs.
+</dd>
+<dt><h4>Remarks</h4>
+<dd>
+This function should be used to set the value of parameters bound to <a href="#datatypes">ODB data type</a> ODB_DOUBLE.
+<br>&nbsp;<br>
+</dd>
+<dt><h3><a name="odbSetParamFloat">odbSetParamFloat</a></h3>
+<dd>Set prepared parameter to float value.<br>
+<pre><b>odbBOOL odbSetParamFloat (</b>
+  <b>odbHANDLE</b> hQry,
+  <b>odbUSHORT</b> usParam,
+  <b>odbFLOAT</b>  fData,
+  <b>odbBOOL</b>   bFinal
+<b>);</b></pre>
+</dd>
+<dt><h4>Parameters</h4>
+<dd><dl>
+<dt>hQry
+<dd>
+[in] Handle to a query object.
+<br>&nbsp;</dd>
+<dt>usParam
+<dd>
+[in] Parameter number (1-based).
+<br>&nbsp;</dd>
+<dt>fData
+<dd>
+[in] Float value to which parameter will be set.
+<br>&nbsp;</dd>
+<dt>bFinal
+<dd>
+[in] Set to FALSE if more request data of the same type needs to be sent to server.  Set to TRUE if it is the final request data, upon which the server will send the response data.
+</dd>
+</dl></dd>
+<dt><h4>Return Values</h4>
+<dd>
+Returns nonzero if the function is successful, otherwise returns zero if an error occurs.
+</dd>
+<dt><h4>Remarks</h4>
+<dd>
+This function should be used to set the value of parameters bound to <a href="#datatypes">ODB data type</a> ODB_REAL.
+<br>&nbsp;<br>
+</dd>
+<dt><h3><a name="odbSetParamLong">odbSetParamLong</a></h3>
+<dd>Set prepared parameter to long value.<br>
+<pre><b>odbBOOL odbSetParamLong (</b>
+  <b>odbHANDLE</b> hQry,
+  <b>odbUSHORT</b> usParam,
+  <b>odbULONG</b>  ulData,
+  <b>odbBOOL</b>   bFinal
+<b>);</b></pre>
+</dd>
+<dt><h4>Parameters</h4>
+<dd><dl>
+<dt>hQry
+<dd>
+[in] Handle to a query object.
+<br>&nbsp;</dd>
+<dt>usParam
+<dd>
+[in] Parameter number (1-based).
+<br>&nbsp;</dd>
+<dt>ulData
+<dd>
+[in] Long value to which parameter will be set.
+<br>&nbsp;</dd>
+<dt>bFinal
+<dd>
+[in] Set to FALSE if more request data of the same type needs to be sent to server.  Set to TRUE if it is the final request data, upon which the server will send the response data.
+</dd>
+</dl></dd>
+<dt><h4>Return Values</h4>
+<dd>
+Returns nonzero if the function is successful, otherwise returns zero if an error occurs.
+</dd>
+<dt><h4>Remarks</h4>
+<dd>
+This function should be used to set the value of parameters bound to <a href="#datatypes">ODB data types</a> ODB_INT or ODB_UINT.
+<br>&nbsp;<br>
+</dd>
+<dt><h3><a name="odbSetParamLongLong">odbSetParamLongLong</a></h3>
+<dd>Set prepared parameter to long long (64-bit integer) value.<br>
+<pre><b>odbBOOL odbSetParamLongLong (</b>
+  <b>odbHANDLE</b>    hQry,
+  <b>odbUSHORT</b>    usParam,
+  <b>odbULONGLONG</b> ullData,
+  <b>odbBOOL</b>      bFinal
+<b>);</b></pre>
+</dd>
+<dt><h4>Parameters</h4>
+<dd><dl>
+<dt>hQry
+<dd>
+[in] Handle to a query object.
+<br>&nbsp;</dd>
+<dt>usParam
+<dd>
+[in] Parameter number (1-based).
+<br>&nbsp;</dd>
+<dt>ullData
+<dd>
+[in] Long long value to which parameter will be set.
+<br>&nbsp;</dd>
+<dt>bFinal
+<dd>
+[in] Set to FALSE if more request data of the same type needs to be sent to server.  Set to TRUE if it is the final request data, upon which the server will send the response data.
+</dd>
+</dl></dd>
+<dt><h4>Return Values</h4>
+<dd>
+Returns nonzero if the function is successful, otherwise returns zero if an error occurs.
+</dd>
+<dt><h4>Remarks</h4>
+<dd>
+This function should be used to set the value of parameters bound to <a href="#datatypes">ODB data types</a> ODB_BIGINT or ODB_UBIGINT.
+<br>&nbsp;<br>
+</dd>
+<dt><h3><a name="odbSetParamNull">odbSetParamNull</a></h3>
+<dd>Set prepared parameter value to NULL.<br>
+<pre><b>odbBOOL odbSetParamNull (</b>
+  <b>odbHANDLE</b> hQry,
+  <b>odbUSHORT</b> usParam,
+  <b>odbBOOL</b>   bFinal
+<b>);</b></pre>
+</dd>
+<dt><h4>Parameters</h4>
+<dd><dl>
+<dt>hQry
+<dd>
+[in] Handle to a query object.
+<br>&nbsp;</dd>
+<dt>usParam
+<dd>
+[in] Parameter number (1-based).
+<br>&nbsp;</dd>
+<dt>bFinal
+<dd>
+[in] Set to FALSE if more request data of the same type needs to be sent to server.  Set to TRUE if it is the final request data, upon which the server will send the response data.
+</dd>
+</dl></dd>
+<dt><h4>Return Values</h4>
+<dd>
+Returns nonzero if the function is successful, otherwise returns zero if an error occurs.
+</dd>
+<dt><h4>Remarks</h4>
+<dd>
+This function is used to set the value of a parameter to NULL.
+<br>&nbsp;<br>
+</dd>
+<dt><h3><a name="odbSetParamShort">odbSetParamShort</a></h3>
+<dd>Set prepared parameter to short value.<br>
+<pre><b>odbBOOL odbSetParamShort (</b>
+  <b>odbHANDLE</b> hQry,
+  <b>odbUSHORT</b> usParam,
+  <b>odbUSHORT</b> usData,
+  <b>odbBOOL</b>   bFinal
+<b>);</b></pre>
+</dd>
+<dt><h4>Parameters</h4>
+<dd><dl>
+<dt>hQry
+<dd>
+[in] Handle to a query object.
+<br>&nbsp;</dd>
+<dt>usParam
+<dd>
+[in] Parameter number (1-based).
+<br>&nbsp;</dd>
+<dt>usData
+<dd>
+[in] Short value to which parameter will be set.
+<br>&nbsp;</dd>
+<dt>bFinal
+<dd>
+[in] Set to FALSE if more request data of the same type needs to be sent to server.  Set to TRUE if it is the final request data, upon which the server will send the response data.
+</dd>
+</dl></dd>
+<dt><h4>Return Values</h4>
+<dd>
+Returns nonzero if the function is successful, otherwise returns zero if an error occurs.
+</dd>
+<dt><h4>Remarks</h4>
+<dd>
+This function should be used to set the value of parameters bound to <a href="#datatypes">ODB data types</a> ODB_SMALLINT or ODB_USMALLINT.
+<br>&nbsp;<br>
+</dd>
+<dt><h3><a name="odbSetParamText">odbSetParamText</a></h3>
+<dd>Set prepared parameter to text value.<br>
+<pre><b>odbBOOL odbSetParamText (</b>
+  <b>odbHANDLE</b> hQry,
+  <b>odbUSHORT</b> usParam,
+  <b>odbPCSTR</b>  pszData,
+  <b>odbBOOL</b>   bFinal
+<b>);</b></pre>
+</dd>
+<dt><h4>Parameters</h4>
+<dd><dl>
+<dt>hQry
+<dd>
+[in] Handle to a query object.
+<br>&nbsp;</dd>
+<dt>usParam
+<dd>
+[in] Parameter number (1-based).
+<br>&nbsp;</dd>
+<dt>pszData
+<dd>
+[in] Pointer to text value to which parameter will be set.
+<br>&nbsp;</dd>
+<dt>bFinal
+<dd>
+[in] Set to FALSE if more request data of the same type needs to be sent to server.  Set to TRUE if it is the final request data, upon which the server will send the response data.
+</dd>
+</dl></dd>
+<dt><h4>Return Values</h4>
+<dd>
+Returns nonzero if the function is successful, otherwise returns zero if an error occurs.
+</dd>
+<dt><h4>Remarks</h4>
+<dd>
+This function should be used to set the value of parameters bound to <a href="#datatypes">ODB data types</a> ODB_CHAR or ODB_WCHAR.
+<br>&nbsp;<br>
+</dd>
+<dt><h3><a name="odbSetParamTimestamp">odbSetParamTimestamp</a></h3>
+<dd>Set prepared parameter to ODB timestamp value.<br>
+<pre><b>odbBOOL odbSetParamTimestamp (</b>
+  <b>odbHANDLE</b>     hQry,
+  <b>odbUSHORT</b>     usParam,
+  <b>odbPTIMESTAMP</b> ptsData,
+  <b>odbBOOL</b>       bFinal
+<b>);</b></pre>
+</dd>
+<dt><h4>Parameters</h4>
+<dd><dl>
+<dt>hQry
+<dd>
+[in] Handle to a query object.
+<br>&nbsp;</dd>
+<dt>usParam
+<dd>
+[in] Parameter number (1-based).
+<br>&nbsp;</dd>
+<dt>ptsData
+<dd>
+[in] Pointer to ODB timestamp value to which parameter will be set.
+<br>&nbsp;</dd>
+<dt>bFinal
+<dd>
+[in] Set to FALSE if more request data of the same type needs to be sent to server.  Set to TRUE if it is the final request data, upon which the server will send the response data.
+</dd>
+</dl></dd>
+<dt><h4>Return Values</h4>
+<dd>
+Returns nonzero if the function is successful, otherwise returns zero if an error occurs.
+</dd>
+<dt><h4>Remarks</h4>
+<dd>
+This function should be used to set the value of parameters bound to <a href="#datatypes">ODB data type</a> ODB_DATETIME.
+<br>&nbsp;<br>
+</dd>
+<dt><h3><a name="odbSetParamUserData">odbSetParamUserData</a></h3>
+<dd>Set parameter's user defined data.<br>
+<pre><b>odbBOOL odbSetParamUserData (</b>
+  <b>odbHANDLE</b> hQry,
+  <b>odbUSHORT</b> usParam,
+  <b>odbPVOID</b>  pVal
+<b>);</b></pre>
+</dd>
+<dt><h4>Parameters</h4>
+<dd><dl>
+<dt>hQry
+<dd>
+[in] Handle to a query object.
+<br>&nbsp;</dd>
+<dt>usParam
+<dd>
+[in] Parameter number (1-based).
+<br>&nbsp;</dd>
+<dt>pVal
+<dd>
+[in] Pointer to user defined data value.
+</dd>
+</dl></dd>
+<dt><h4>Return Values</h4>
+<dd>
+Returns nonzero if the function is successful, otherwise returns zero if an error occurs.
+</dd>
+<dt><h4>Remarks</h4>
+<dd>
+This function is used to associate user defined data with a parameter.  Use <a href="#odbParamUserData">odbParamUserData</a> to retrieve the data.
+<br>&nbsp;<br>
+</dd>
+<dt><h3><a name="odbSetReadTimeout">odbSetReadTimeout</a></h3>
+<dd>Set read timeout.<br>
+<pre><b>odbULONG odbSetReadTimeout (</b>
+  <b>odbHANDLE</b> hOdb,
+  <b>odbULONG</b>  ulTimeout
+<b>);</b></pre>
+</dd>
+<dt><h4>Parameters</h4>
+<dd><dl>
+<dt>hOdb
+<dd>
+[in] Handle to a connection or query object.
+<br>&nbsp;</dd>
+<dt>ulTimeout
+<dd>
+[in] Timeout in seconds.
+</dd>
+</dl></dd>
+<dt><h4>Return Values</h4>
+<dd>
+Returns the previous timeout value.
+</dd>
+<dt><h4>Remarks</h4>
+<dd>
+Use this function change the timeout for reading responses from an ODBTP server.
+<br>&nbsp;<br>
+</dd>
+<dt><h3><a name="odbSetSendTimeout">odbSetSendTimeout</a></h3>
+<dd>Set send timeout.<br>
+<pre><b>odbULONG odbSetSendTimeout (</b>
+  <b>odbHANDLE</b> hOdb,
+  <b>odbULONG</b>  ulTimeout
+<b>);</b></pre>
+</dd>
+<dt><h4>Parameters</h4>
+<dd><dl>
+<dt>hOdb
+<dd>
+[in] Handle to a connection or query object.
+<br>&nbsp;</dd>
+<dt>ulTimeout
+<dd>
+[in] Timeout in seconds.
+</dd>
+</dl></dd>
+<dt><h4>Return Values</h4>
+<dd>
+Returns the previous timeout value.
+</dd>
+<dt><h4>Remarks</h4>
+<dd>
+Use this function change the timeout for sending requests from an ODBTP server.
+<br>&nbsp;<br>
+</dd>
+<dt><h3><a name="odbSetUserData">odbSetUserData</a></h3>
+<dd>Set user defined data.<br>
+<pre><b>void odbSetUserData (</b>
+  <b>odbHANDLE</b> hOdb,
+  <b>odbPVOID</b>  pVal
+<b>);</b></pre>
+</dd>
+<dt><h4>Parameters</h4>
+<dd><dl>
+<dt>hOdb
+<dd>
+[in] Handle to a connection or query object.
+<br>&nbsp;</dd>
+<dt>pVal
+<dd>
+[in] Pointer to user defined data.
+</dd>
+</dl></dd>
+<dt><h4>Return Values</h4>
+<dd>
+This function does not return a value.
+</dd>
+<dt><h4>Remarks</h4>
+<dd>
+This function allows user defined data to be attached to a connection or query object.  Call odbGetUserData to retrieve the data.
+<br>&nbsp;<br>
+</dd>
+<dt><h3><a name="odbSetUserDataLong">odbSetUserDataLong</a></h3>
+<dd>Set user defined data to long value.<br>
+<pre><b>void odbSetUserDataLong (</b>
+  <b>odbHANDLE</b> hOdb,
+  <b>odbULONG</b>  ulVal
+<b>);</b></pre>
+</dd>
+<dt><h4>Parameters</h4>
+<dd><dl>
+<dt>hOdb
+<dd>
+[in] Handle to a connection or query object.
+<br>&nbsp;</dd>
+<dt>ulVal
+<dd>
+[in] Long value to which user defined data will be set.
+</dd>
+</dl></dd>
+<dt><h4>Return Values</h4>
+<dd>
+This function does not return a value.
+</dd>
+<dt><h4>Remarks</h4>
+<dd>
+This function allows a user defined value of type odbULONG to be attached to a connection or query object.  Call odbGetUserDataLong to retrieve the value.
+<br>&nbsp;<br>
+</dd>
+<dt><h3><a name="odbStrToGuid">odbStrToGuid</a></h3>
+<dd>Convert GUID character string to ODB GUID.<br>
+<pre><b>odbPGUID odbStrToGuid (</b>
+  <b>odbPGUID</b> pguidVal,
+  <b>odbPCSTR</b> pszStr
+<b>);</b></pre>
+</dd>
+<dt><h4>Parameters</h4>
+<dd><dl>
+<dt>pguidVal
+<dd>
+[out] Pointer to ODB GUID variable to store conversion of string.
+<br>&nbsp;</dd>
+<dt>pszStr
+<dd>
+[in] Pointer to GUID character string to be converted to ODB GUID.
+</dd>
+</dl></dd>
+<dt><h4>Return Values</h4>
+<dd>
+Returns the pointer to the ODB GUID.
+</dd>
+<dt><h4>Remarks</h4>
+<dd>
+Use this function to convert a GUID character string of the form "XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX"
+to an ODB GUID.
+<br>&nbsp;<br>
+</dd>
+<dt><h3><a name="odbStrToLongLong">odbStrToLongLong</a></h3>
+<dd>Convert numeric text string to long long (64-bit integer) value.<br>
+<pre><b>odbLONGLONG odbStrToLongLong (</b>
+  <b>odbPCSTR</b> pszStr
+<b>);</b></pre>
+</dd>
+<dt><h4>Parameters</h4>
+<dd><dl>
+<dt>pszStr
+<dd>
+[in] Pointer to buffer containing numeric text string.
+</dd>
+</dl></dd>
+<dt><h4>Return Values</h4>
+<dd>
+Long long value resulting from the conversion of numeric text string.
+</dd>
+<dt><h4>Remarks</h4>
+<dd>
+The numeric text string can contain leading spaces.  The conversion process will terminate if a non-numeric or non-leading "-" character is detected.
+<br>&nbsp;<br>
+</dd>
+<dt><h3><a name="odbStrToTimestamp">odbStrToTimestamp</a></h3>
+<dd>Convert ISO formatted character string to ODB timestamp.<br>
+<pre><b>odbPTIMESTAMP odbStrToTimestamp (</b>
+  <b>odbPTIMESTAMP</b> ptsTime,
+  <b>odbPCSTR</b>      pszStr
+<b>);</b></pre>
+</dd>
+<dt><h4>Parameters</h4>
+<dd><dl>
+<dt>ptsTime
+<dd>
+[out] Pointer to ODB timestamp variable to store conversion of string.
+<br>&nbsp;</dd>
+<dt>pszStr
+<dd>
+[in] Pointer to ISO formatted string to be converted to ODB timestamp.
+</dd>
+</dl></dd>
+<dt><h4>Return Values</h4>
+<dd>
+Returns the pointer to the ODB timestamp.
+</dd>
+<dt><h4>Remarks</h4>
+<dd>
+Use this function to convert an ISO formatted, YYYY-MM-DD HH:MM:SS.MMM,
+character string to an ODB timestamp.
+<br>&nbsp;<br>
+</dd>
+<dt><h3><a name="odbStrToULongLong">odbStrToULongLong</a></h3>
+<dd>Convert numeric text string to unsigned long long (64-bit integer) value.<br>
+<pre><b>odbULONGLONG odbStrToULongLong (</b>
+  <b>odbPCSTR</b> pszStr
+<b>);</b></pre>
+</dd>
+<dt><h4>Parameters</h4>
+<dd><dl>
+<dt>pszStr
+<dd>
+[in] Pointer to buffer containing numeric text string.
+</dd>
+</dl></dd>
+<dt><h4>Return Values</h4>
+<dd>
+Unsigned long long value resulting from the conversion of numeric text string.
+</dd>
+<dt><h4>Remarks</h4>
+<dd>
+The numeric text string can contain leading spaces.  The conversion process will terminate if a non-numeric or non-leading "-" character is detected.
+<br>&nbsp;<br>
+</dd>
+<dt><h3><a name="odbTimestampToCTime">odbTimestampToCTime</a></h3>
+<dd>Convert ODB timestamp to C time.<br>
+<pre><b>odbLONG odbTimestampToCTime (</b>
+  <b>odbPTIMESTAMP</b> ptsTime
+<b>);</b></pre>
+</dd>
+<dt><h4>Parameters</h4>
+<dd><dl>
+<dt>ptsTime
+<dd>
+[in] Pointer to ODB timestamp data to be converted to C time.
+</dd>
+</dl></dd>
+<dt><h4>Return Values</h4>
+<dd>
+Returns the C time value corresponding to the specified ODB timestamp value.
+</dd>
+<dt><h4>Remarks</h4>
+<dd>
+Use this function to convert an ODB timestamp value to a C time value.  This function is provided so that datetime data can be processed with C time functions.
+<br>&nbsp;<br>
+</dd>
+<dt><h3><a name="odbTimestampToStr">odbTimestampToStr</a></h3>
+<dd>Convert ODB timestamp to ISO formatted character string.<br>
+<pre><b>odbPSTR odbTimestampToStr (</b>
+  <b>odbPSTR</b>       pszStr,
+  <b>odbPTIMESTAMP</b> ptsTime,
+  <b>odbBOOL</b>       bIncludeFraction
+<b>);</b></pre>
+</dd>
+<dt><h4>Parameters</h4>
+<dd><dl>
+<dt>pszStr
+<dd>
+[out] Pointer to character buffer whare ISO formatted string will be stored.
+<br>&nbsp;</dd>
+<dt>ptsTime
+<dd>
+[in] Pointer to ODB timestamp data to be converted to ISO string.
+<br>&nbsp;</dd>
+<dt>bIncludeFraction
+<dd>
+[in] Determines whether or not to include millisecond fraction.
+</dd>
+</dl></dd>
+<dt><h4>Return Values</h4>
+<dd>
+Returns the pointer to the character buffer containing the resulting ISO string.
+</dd>
+<dt><h4>Remarks</h4>
+<dd>
+Use this function to convert an ODB timestamp value to an ISO formatted
+string. If bIncludeFraction is TRUE, then the result will be of the form
+"YYYY-MM-DD HH:MM:SS.MMM", otherwise it is "YYYY-MM-DD HH:MM:SS."
+<br>&nbsp;<br>
+</dd>
+<dt><h3><a name="odbULongLongToStr">odbULongLongToStr</a></h3>
+<dd>Convert unsigned long long (64-bit integer) value to numeric text string.<br>
+<pre><b>odbPSTR odbULongLongToStr (</b>
+  <b>odbULONGLONG</b> ullVal,
+  <b>odbPSTR</b>      pszStrEnd
+<b>);</b></pre>
+</dd>
+<dt><h4>Parameters</h4>
+<dd><dl>
+<dt>ullVal
+<dd>
+[in] Unsigned long long value to be converted.
+<br>&nbsp;</dd>
+<dt>pszStrEnd
+<dd>
+[out] Pointer to end of text string buffer in which converted value will be placed.
+</dd>
+</dl></dd>
+<dt><h4>Return Values</h4>
+<dd>
+Pointer to the numeric text string resulting from the conversion.
+</dd>
+<dt><h4>Remarks</h4>
+<dd>
+The size of the string buffer must be large enough to store the required number of characters needed to represent the unsigned long long value and a null terminator.
+<br>&nbsp;<br>
+</dd>
+<dt><h3><a name="odbUseRowCache">odbUseRowCache</a></h3>
+<dd>Enable or disable row cache usage.<br>
+<pre><b>odbBOOL odbUseRowCache (</b>
+  <b>odbHANDLE</b> hCon,
+  <b>odbBOOL</b>   bUse,
+  <b>odbULONG</b>  ulSize
+<b>);</b></pre>
+</dd>
+<dt><h4>Parameters</h4>
+<dd><dl>
+<dt>hCon
+<dd>
+[in] Handle to a connection object.
+<br>&nbsp;</dd>
+<dt>bUse
+<dd>
+[in] Set to TRUE to enable row cache usage, or FALSE to disable usage.
+<br>&nbsp;</dd>
+<dt>ulSize
+<dd>
+[in] The maximum row storage size of the cache.
+</dd>
+</dl></dd>
+<dt><h4>Return Values</h4>
+<dd>
+Returns nonzero if the function is successful, otherwise returns zero if an error occurs.
+</dd>
+<dt><h4>Remarks</h4>
+<dd>
+A row cache can be used to store some or all of the rows from a query result set.  Cached rows can be scrolled, and accessed offline after executing <a href="#odbDetachQry">odbDetachQry</a>.  If enabled, <a href="#odbFetchRowsIntoCache">odbFetchRowsInfoCache</a> can be used to place the rows from a query result into the cache. odbFetchRowsIntoCache will store up to <i>ulSize</i> rows into the cache.  If <i>ulSize</i> is set to 0, then all rows will be stored in the cache.
+<br>&nbsp;<br>
+</dd>
+<dt><h3><a name="odbWinsockCleanup">odbWinsockCleanup</a></h3>
+<dd>Terminates use of winsock subsystem.<br>
+<pre><b>void odbWinsockCleanup (</b>
+<b>);</b></pre>
+</dd>
+<dt><h4>Parameters</h4>
+<dd><dl>
+<dt>None
+</dl></dd>
+<dt><h4>Return Values</h4>
+<dd>
+This function does not return a value.
+</dd>
+<dt><h4>Remarks</h4>
+<dd>
+This function is only required for Win32-based client applications.  It has no effect on non-Win32 systems.
+<br>&nbsp;<br>
+</dd>
+<dt><h3><a name="odbWinsockStartup">odbWinsockStartup</a></h3>
+<dd>Initiates use of winsock subsystem.<br>
+<pre><b>odbBOOL odbWinsockStartup (</b>
+<b>);</b></pre>
+</dd>
+<dt><h4>Parameters</h4>
+<dd><dl>
+<dt>None
+</dl></dd>
+<dt><h4>Return Values</h4>
+<dd>
+Returns nonzero if the function is successful, otherwise returns zero if an error occurs.
+</dd>
+<dt><h4>Remarks</h4>
+<dd>
+This function is only required for Win32-based client applications.  It has no effect on non-Win32 systems.
+<br>&nbsp;<br>
+</dd>
+</dl>
+</body>
+</html>

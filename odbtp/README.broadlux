@@ -1,0 +1,18 @@
+This extension needs php5-dev debian package
+
+1) Build odbtp
+
+./configure
+./make
+ksu -e /usr/bin/make install
+
+2) Build php extension with MSSQL support
+
+cd php/ext/odbtp 
+phpize
+cd ..
+make
+
+3) Create a odbtp.ini under /etc/php5/conf.d
+
+4) cp php_odbtp.so under /usr/lib/php5 ...

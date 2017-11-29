@@ -1,0 +1,96 @@
+<html>
+<head>
+<title>ODBTP Version 1.1.1</title>
+<link href="main.css" rel="stylesheet" type="text/css">
+</head>
+<body>
+<table cellspacing="0" cellpadding="0" border="0">
+<tr>
+<td valign="top">
+<table cellspacing="3" cellpadding="0" border="0">
+<tr><td><nobr><a class="MenuItem" href="index.html">Home Page</a></nobr></td></tr>
+<tr><td><nobr><a class="MenuItem" href="features.html">Features</a></nobr></td></tr>
+<tr><td><nobr><a class="MenuItem" href="http://sourceforge.net/project/showfiles.php?group_id=70325">Download</a></nobr></td></tr>
+<tr><td><span class="MenuTitle">&nbsp;</span></td></tr>
+<tr><td><span class="MenuTitle">DOCUMENTATION</span></td></tr>
+<tr><td><nobr><a class="MenuItem" href="install.html">Installation</a></nobr></td></tr>
+<tr><td><nobr><a class="MenuItem" href="servconf.html">Server Configuration</a></nobr></td></tr>
+<tr><td><nobr><a class="MenuItem" href="clilib-index.html">Client Library</a></nobr></td></tr>
+<tr><td><nobr><a class="MenuItem" href="phpext-index.html">PHP Extension</a></nobr></td></tr>
+<tr><td><nobr><a class="MenuItem" href="examples.html">Examples</a></nobr></td></tr>
+<tr><td><nobr><a class="MenuItem" href="protocol-index.html">ODBTP Protocol</a></nobr></td></tr>
+<tr><td><span class="MenuTitle">&nbsp;</span></td></tr>
+<tr><td><span class="MenuTitle">DEVELOPMENT</span></td></tr>
+<tr><td><nobr><a class="MenuItem" href="http://sourceforge.net/projects/odbtp">SF Project Page</a></nobr></td></tr>
+<tr><td><nobr><a class="MenuItem" href="http://sourceforge.net/forum/?group_id=70325">Forums</a></nobr></td></tr>
+<tr><td><nobr><a class="MenuItem" href="http://sourceforge.net/tracker/?group_id=70325&atid=527367">Bugs</a></nobr></td></tr>
+<tr><td><nobr><a class="MenuItem" href="http://sourceforge.net/cvs/?group_id=70325">CVS</a></nobr></td></tr>
+<tr><td><span class="MenuTitle">&nbsp;</span></td></tr>
+<tr><td><span class="MenuTitle">HOSTED BY</span></td></tr>
+<tr><td><a href="http://sourceforge.net"><img src="http://sourceforge.net/sflogo.php?group_id=70325&type=2" width="125" height="37" border="0" alt="SourceForge.net Logo"></a></td></tr>
+</table>
+</td>
+<td><nobr>&nbsp;&nbsp;&nbsp;&nbsp;</nobr></td>
+<td valign="top">
+<span class="PageTitle">ODBTP -- Version 1.1.1 Changes</span>
+<p>
+<dl>
+<dt><b>Fixed Bugs</b>
+<dd>
+In addition to some minor and unreported bugs, the bugs that could cause
+the server to crash were fixed. The latter bugs pertained to the
+retrieval or submission of column and parameter data.  If the size of
+the data exceeded the size of its bounded buffer, a memory violation
+could occur in response to the server's attempt to access invalid
+memory. The problem would only occur if the buffer was not implicitly or
+explicitly allocated to a size greater than the maximum data size.
+This issue has been completely resolved in this version.
+<br>&nbsp;<br>
+</dd>
+<dt><b>Data Truncation Detection</b>
+<dd>
+Provisions were added for detecting whether or not the data retrieved from a
+column or parameter was truncated. This is useful when retrieving text
+or image data, where the size of the buffer bound to the corresponding
+column or parameter may not be sufficient.
+<br>&nbsp;<br>
+</dd>
+<dt><b>Server Auto-Restart</b>
+<dd>
+The ODBTP server will automatically restart if it unexpectedly
+terminates. The time and date of the termination is placed in the
+Windoes Event Log, and a local file. This is useful if the server crashes
+because of an unresolved issue in the server or ODBC driver.
+<br>&nbsp;<br>
+</dd>
+<dt><b>Socket Error Details</b>
+<dd>
+Functions were added to the C client library to obtain more details about
+socket errors. Included is a function for retrieving the system dependent
+error code, and another for obtaining the error text.
+<br>&nbsp;<br>
+</dd>
+<dt><b>New Interface Types</b>
+<dd>
+Interface types for FoxPro DBC (Database Container) files, and Excel
+worksheets were added.
+<br>&nbsp;<br>
+</dd>
+<dt><b>PHP 5 Support</b>
+<dd>
+The PHP extension and its build files were modified so that they could be
+compiled under PHP version 5.  Win32 binaries of the extension for PHP 5
+are also included in this version.
+<br>&nbsp;<br>
+</dd>
+<dt><b>Fixed PHP PEAR DB Driver</b>
+<dd>
+The PEAR DB driver was modified to work with PEAR DB version 1.6.
+<br>&nbsp;<br>
+</dd>
+</dl>
+</td>
+</tr>
+</table>
+</body>
+</html>

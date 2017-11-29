@@ -1,0 +1,15 @@
+// $Id: config.w32,v 1.2 2004/06/20 20:19:47 rtwitty Exp $
+// vim:ft=javascript
+
+ARG_WITH("odbtp", "ODBTP support", "no");
+
+if (PHP_ODBTP != "no") {
+	if (CHECK_LIB("libodbtp.lib", "odbtp", PHP_ODBTP) &&
+			CHECK_HEADER_ADD_INCLUDE("odbtp.h", "CFLAGS_ODBTP") &&
+			CHECK_LIB("ws2_32.lib", "odbtp", PHP_ODBTP)) {
+		EXTENSION("odbtp", "php_odbtp.c");
+		AC_DEFINE('HAVE_ODBTP', 1, 'ODBTP support');
+	} else {
+		WARNING("ODBTP not enabled; libraries and headers not found");
+	}
+}

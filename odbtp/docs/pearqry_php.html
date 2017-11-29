@@ -1,0 +1,86 @@
+<html>
+<head>
+<title>pearqry.php</title>
+</head>
+<body>
+<h3>pearqry.php</h3>
+<pre>&lt;html&gt;
+&lt;head&gt;
+&lt;title&gt;ODBTP PEAR DB Query&lt;/title&gt;
+&lt;/head&gt;
+&lt;body&gt;
+&lt;?php
+
+    require( "DB.php" );
+
+    $dsn = 'odbtp://myuid:mypwd@mydbhost/mydb';
+
+    $dbh = DB::connect( $dsn );
+
+    if( PEAR::isError( $dbh ) ) {
+        echo "Error message: " . $dbh-&gt;getMessage() . "&lt;br&gt;";
+        echo "Detailed error description: " . $dbh-&gt;getDebugInfo() . "&lt;br&gt;";
+        die;
+    }
+    $res = $dbh-&gt;query( $_REQUEST['query'] );
+    if( PEAR::isError( $res ) ) {
+        echo "Error message: " . $res-&gt;getMessage() . "&lt;br&gt;";
+        echo "Detailed error description: " . $res-&gt;getDebugInfo() . "&lt;br&gt;";
+        die;
+    }
+    do {
+        if( !($cols = $res-&gt;numCols()) ) continue;
+
+        echo $res-&gt;numRows() . " rows&lt;p&gt;";
+
+        $colinfo = $res-&gt;tableInfo();
+        if( PEAR::isError( $colinfo ) ) {
+            echo "Error message: " . $colinfo-&gt;getMessage() . "&lt;br&gt;";
+            echo "Detailed error description: " . $colinfo-&gt;getDebugInfo() . "&lt;br&gt;";
+            die;
+        }
+        echo "&lt;table cellpadding=2 cellspacing=0 border=1&gt;\n";
+        echo "&lt;tr&gt;";
+        echo "&lt;td&gt;&nbsp;&lt;b&gt;Table&lt;/b&gt;&nbsp;&lt;/td&gt;";
+        echo "&lt;td&gt;&nbsp;&lt;b&gt;Name&lt;/b&gt;&nbsp;&lt;/td&gt;";
+        echo "&lt;td&gt;&nbsp;&lt;b&gt;Type&lt;/b&gt;&nbsp;&lt;/td&gt;";
+        echo "&lt;td&gt;&nbsp;&lt;b&gt;Length&lt;/b&gt;&nbsp;&lt;/td&gt;";
+        echo "&lt;td&gt;&nbsp;&lt;b&gt;Flags&lt;/b&gt;&nbsp;&lt;/td&gt;";
+        echo "&lt;/tr&gt;";
+
+        for( $i = 0; $i &lt; $cols; $i++ ) {
+            echo "&lt;tr&gt;";
+            echo "&lt;td&gt;&nbsp;". $colinfo[$i]['table'] . "&nbsp;&lt;/td&gt;";
+            echo "&lt;td&gt;&nbsp;". $colinfo[$i]['name'] . "&nbsp;&lt;/td&gt;";
+            echo "&lt;td&gt;&nbsp;". $colinfo[$i]['type'] . "&nbsp;&lt;/td&gt;";
+            echo "&lt;td&gt;&nbsp;". $colinfo[$i]['len'] . "&nbsp;&lt;/td&gt;";
+            echo "&lt;td&gt;&nbsp;". $colinfo[$i]['flags'] . "&nbsp;&lt;/td&gt;";
+            echo "&lt;/tr&gt;";
+        }
+        echo "&lt;/table&gt;&lt;p&gt;";
+        echo "&lt;table cellpadding=2 cellspacing=0 border=1&gt;\n";
+        echo "&lt;tr&gt;";
+
+        for( $col = 0; $col &lt; $cols; $col++ ) {
+            echo "&lt;td&gt;&lt;nobr&gt;&nbsp;" . $colinfo[$col]['name'] . "&nbsp;&lt;/nobr&gt;&lt;/td&gt;";
+        }
+        echo "&lt;/tr&gt;\n";
+
+        while( $row = $res-&gt;fetchRow() ) {
+            echo "&lt;tr&gt;";
+            for( $col = 0; $col &lt; $cols; $col++ ) {
+                if( is_null( $row[$col] ) ) $row[$col] = "NULL";
+                echo "&lt;td&gt;&lt;nobr&gt;&nbsp;$row[$col]&nbsp;&lt;/nobr&gt;&lt;/td&gt;";
+            }
+            echo "&lt;/tr&gt;\n";
+        }
+        echo "&lt;/table&gt;&lt;p&gt;\n";
+    }
+    while( $res-&gt;nextResult() );
+
+    $dbh-&gt;disconnect();
+?&gt;
+&lt;/body&gt;
+&lt;/html&gt;</pre>
+</body>
+</html>

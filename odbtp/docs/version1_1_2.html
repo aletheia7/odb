@@ -1,0 +1,73 @@
+<html>
+<head>
+<title>ODBTP Version 1.1.2</title>
+<link href="main.css" rel="stylesheet" type="text/css">
+</head>
+<body>
+<table cellspacing="0" cellpadding="0" border="0">
+<tr>
+<td valign="top">
+<table cellspacing="3" cellpadding="0" border="0">
+<tr><td><nobr><a class="MenuItem" href="index.html">Home Page</a></nobr></td></tr>
+<tr><td><nobr><a class="MenuItem" href="features.html">Features</a></nobr></td></tr>
+<tr><td><nobr><a class="MenuItem" href="http://sourceforge.net/project/showfiles.php?group_id=70325">Download</a></nobr></td></tr>
+<tr><td><span class="MenuTitle">&nbsp;</span></td></tr>
+<tr><td><span class="MenuTitle">DOCUMENTATION</span></td></tr>
+<tr><td><nobr><a class="MenuItem" href="install.html">Installation</a></nobr></td></tr>
+<tr><td><nobr><a class="MenuItem" href="servconf.html">Server Configuration</a></nobr></td></tr>
+<tr><td><nobr><a class="MenuItem" href="clilib-index.html">Client Library</a></nobr></td></tr>
+<tr><td><nobr><a class="MenuItem" href="phpext-index.html">PHP Extension</a></nobr></td></tr>
+<tr><td><nobr><a class="MenuItem" href="examples.html">Examples</a></nobr></td></tr>
+<tr><td><nobr><a class="MenuItem" href="protocol-index.html">ODBTP Protocol</a></nobr></td></tr>
+<tr><td><span class="MenuTitle">&nbsp;</span></td></tr>
+<tr><td><span class="MenuTitle">DEVELOPMENT</span></td></tr>
+<tr><td><nobr><a class="MenuItem" href="http://sourceforge.net/projects/odbtp">SF Project Page</a></nobr></td></tr>
+<tr><td><nobr><a class="MenuItem" href="http://sourceforge.net/forum/?group_id=70325">Forums</a></nobr></td></tr>
+<tr><td><nobr><a class="MenuItem" href="http://sourceforge.net/tracker/?group_id=70325&atid=527367">Bugs</a></nobr></td></tr>
+<tr><td><nobr><a class="MenuItem" href="http://sourceforge.net/cvs/?group_id=70325">CVS</a></nobr></td></tr>
+<tr><td><span class="MenuTitle">&nbsp;</span></td></tr>
+<tr><td><span class="MenuTitle">HOSTED BY</span></td></tr>
+<tr><td><a href="http://sourceforge.net"><img src="http://sourceforge.net/sflogo.php?group_id=70325&type=2" width="125" height="37" border="0" alt="SourceForge.net Logo"></a></td></tr>
+</table>
+</td>
+<td><nobr>&nbsp;&nbsp;&nbsp;&nbsp;</nobr></td>
+<td valign="top">
+<span class="PageTitle">ODBTP -- Version 1.1.2 Changes</span>
+<p>
+<dl>
+<dt><b>Fixed Bugs</b>
+<dd>
+Fixed the problem that was causing the server to terminate if
+output parameter data from a prepared procedure is not read
+before closing the connection.
+<br>&nbsp;<br>
+</dd>
+<dt><b>Prepared Procedure Parameter Cache</b>
+<dd>
+A cache for prepared procedure parameter information was incorporated into
+the Win32 server. This feature minimizes the number of times the server
+needs to obtain parameter information from the underlying DBMS
+when it prepares a procedure.  The use
+of this cache is optional, and can be enabled by setting the odbtpsrv.ini
+paraeter EnableProcCache to 1.
+<br>&nbsp;<br>
+</dd>
+<dt><b>Compilation on 64-bit Systems</b>
+<dd>
+The ODBTP C client library can now be successfully compiled on 64-bit
+systems like Tru64 UNIX.  See the README.64bitOS file for more details.
+<br>&nbsp;<br>
+</dd>
+<dt><b>PHP Extension for NetWare</b>
+<dd>
+The ODBTP PHP extension for NetWare, which was contributed by
+<a href="http://www.gknw.com">Guenter Knauf</a>, is included in the
+base distribution.
+<br>&nbsp;<br>
+</dd>
+</dl>
+</td>
+</tr>
+</table>
+</body>
+</html>

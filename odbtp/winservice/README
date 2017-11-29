@@ -1,0 +1,17 @@
+Installing the ODBTP Service on Windows NT / 2000 / XP Pro
+==========================================================
+
+1. Create a directory for ODBTP service executables, i.e.,
+   "md C:\ODBTP".
+
+2. Copy odbtpctl.exe, odbtpsrv.exe and odbtpsrv.ini into directory.
+   These files are stored in <odbtp dist dir>/winservice.
+
+3. Open a command prompt window, change to the directory where you
+   put the service executables, and then run the following commands:
+
+        odbtpctl install
+        odbtpctl start
+
+Note: Once installed, the service can be stopped / started via
+the Windows Service Control Manager.

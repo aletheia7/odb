@@ -1,0 +1,158 @@
+<html>
+<head>
+<title>addemp.php</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+</head>
+<body>
+<h3>addemp.php</h3>
+<pre>&lt;?php
+/*
+    The following SQL was used to create the table and stored procedures
+    used by this example script.
+
+    CREATE TABLE dbo.Employees (
+        Id int IDENTITY (1, 1) NOT NULL ,
+        ExtId numeric (15,0) UNIQUE NOT NULL ,
+        LastName varchar (50) NOT NULL ,
+        FirstName varchar (50) NOT NULL ,
+        Title varchar (256) NOT NULL ,
+        Salary money NOT NULL ,
+        JobDesc varchar (3000) NULL ,
+        Notes ntext NULL ,
+        Active bit NOT NULL DEFAULT (1) ,
+        DateEntered datetime NOT NULL DEFAULT (getdate()) ,
+        DateModified datetime NOT NULL DEFAULT (getdate()) ,
+        CONSTRAINT PKCL_Employees_Id PRIMARY KEY  CLUSTERED (
+            Id
+        )
+    )
+    GO
+
+    CREATE PROCEDURE AddEmployee
+        @ExtId numeric(15,0),
+        @LastName varchar(50),
+        @FirstName varchar(50),
+        @Title varchar(256),
+        @Salary money,
+        @JobDesc varchar(3000) = 'Job not defined'
+    AS
+        SET NOCOUNT ON
+
+        INSERT INTO Employees( ExtId, LastName, FirstName,
+                               Title, Salary, JobDesc )
+                       VALUES( @ExtId, @LastName, @FirstName,
+                               @Title, @Salary, @JobDesc )
+
+        IF @@ERROR <> 0 RETURN 0
+        RETURN @@IDENTITY
+    GO
+
+    CREATE PROCEDURE SetEmployeeNotes
+        @Id int,
+        @Notes ntext
+    AS
+        SET NOCOUNT ON
+
+        UPDATE Employees SET
+          Notes = @Notes,
+          DateModified = getdate()
+        WHERE Id = @Id
+    GO
+*/
+
+    $con = odbtp_connect( 'odbtp.somewhere.com',
+                          'DRIVER={SQL Server};SERVER=myserver;UID=myuid;PWD=mypwd;DATABASE=empdb;' ) or die;
+
+    odbtp_set_attr( ODB_ATTR_TRANSACTIONS, ODB_TXN_READCOMMITTED ) or die;
+
+    $qry1 = odbtp_allocate_query() or die;
+    odbtp_prepare( "{? = call AddEmployee( ?, ?, ?, ?, ?, ? )}", $qry1 ) or die;
+    odbtp_output( $qry1, 1 );
+    odbtp_input( $qry1, 2 );
+    odbtp_input( $qry1, 3 );
+    odbtp_input( $qry1, 4 );
+    odbtp_input( $qry1, 5 );
+    odbtp_input( $qry1, 6 );
+    odbtp_input( $qry1, 7 );
+
+    $qry2 = odbtp_allocate_query() or die;
+    odbtp_prepare( "{call SetEmployeeNotes( ?, ? )}", $qry2 ) or die;
+    odbtp_input( $qry2, 1 );
+    odbtp_input( $qry2, 2 );
+
+    function AddEmployee( $qry, $ExtId, $LastName, $FirstName, $Title, $Salary, $JobDesc )
+    {
+        odbtp_set( $qry, 2, $ExtId );
+        odbtp_set( $qry, 3, $LastName );
+        odbtp_set( $qry, 4, $FirstName );
+        odbtp_set( $qry, 5, $Title );
+        odbtp_set( $qry, 6, $Salary );
+        if( $JobDesc != ODB_DEFAULT )
+            odbtp_set( $qry, 7, $JobDesc );
+        else
+            odbtp_set( $qry, 7 );
+
+        if( !odbtp_execute( $qry ) ) {
+            odbtp_rollback();
+            die;
+        }
+        return odbtp_get( $qry, 1 );
+    }
+    function SetEmployeeNotes( $qry, $Id, $Notes )
+    {
+        odbtp_set( $qry, 1, $Id );
+        odbtp_set( $qry, 2, $Notes );
+
+        if( !odbtp_execute( $qry ) ) {
+            odbtp_rollback();
+            die;
+        }
+    }
+    $Id = AddEmployee( $qry1, "111222333444555", "Rogers", "Frank", "CFO", "222444.88", ODB_DEFAULT );
+    SetEmployeeNotes( $qry2, $Id, "He's one of the gugs who cooks the books." );
+
+    $Id = AddEmployee( $qry1, "311322343454685", "Johnson", "Mary", "Supervisor", 100000, "Supervises Web Developers" );
+    SetEmployeeNotes( $qry2, $Id, "She can read greek: αΑ βΒ γΓ δΔ εΕ ζΖ ηΗ θΘ ιΙ κΚ λΛ μΜ νΝ ξΞ οΟ πΠ ρΡ σΣ τΤ υΥ φΦ χΧ ψΨ ωΩ" );
+
+    $Id = AddEmployee( $qry1, "568899902133452", "Smith", "John", "CEO", "38020979.46", NULL );
+    SetEmployeeNotes( $qry2, $Id, "He's the guy that makes all the money." );
+
+    $Id = AddEmployee( $qry1, "100000900000000", "Lopez", "Susan", "Computer Programmer", 73144.57, "Makes web-based applications" );
+    SetEmployeeNotes( $qry2, $Id, "She prefers to use PHP for web development instead of ASP or JSP." );
+
+    odbtp_commit();
+?&gt;
+&lt;html&gt;
+&lt;head&gt;
+&lt;title&gt;Add Employees&lt;/title&gt;
+&lt;meta http-equiv="Content-Type" content="text/html; charset=utf-8"&gt;
+&lt;/head&gt;
+&lt;body&gt;
+&lt;?php
+    $qry1 = odbtp_query( "SELECT * FROM Employees" ) or die;
+
+    $cols = odbtp_num_fields( $qry1 );
+
+    echo "&lt;table cellpadding=2 cellspacing=0 border=1&gt;\n";
+    echo "&lt;tr&gt;";
+    for( $col = 0; $col &lt; $cols; $col++ )
+        echo "&lt;th&gt;&amp;nbsp;" . odbtp_field_name( $qry1, $col ) . "&amp;nbsp;&lt;/th&gt;";
+    echo "&lt;/tr&gt;\n";
+
+    odbtp_bind_field( $qry1, "DateEntered", ODB_CHAR ) or die;
+    odbtp_bind_field( $qry1, "DateModified", ODB_CHAR ) or die;
+
+    while( ($rec = odbtp_fetch_array($qry1)) ) {
+        echo "&lt;tr&gt;";
+        for( $col = 0; $col &lt; $cols; $col++ )
+            echo "&lt;td&gt;&lt;nobr&gt;&amp;nbsp;$rec[$col]&amp;nbsp;&lt;/nobr&gt;&lt;/td&gt;";
+        echo "&lt;/tr&gt;\n";
+    }
+    echo "&lt;/table&gt;\n";
+
+    odbtp_close();
+?&gt;
+&lt;/body&gt;
+&lt;/html&gt;</pre>
+</body>
+</html>

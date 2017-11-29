@@ -1,0 +1,150 @@
+<html>
+<head>
+<title>ODBTP Installation</title>
+<meta name="keywords" content="ODBTP, ODBC Drivers, Microsoft SQL Server, Microsoft Access, Oracle, Sybase, Database, PHP, UNIX, Linux">
+<meta name="Description" content="Provides remote access to ODBC without requiring local ODBC facilities.">
+<link href="main.css" rel="stylesheet" type="text/css">
+</head>
+<body>
+<table cellspacing="0" cellpadding="0" border="0">
+<tr>
+<td valign="top">
+<table cellspacing="3" cellpadding="0" border="0">
+<tr><td><nobr><a class="MenuItem" href="index.html">Home Page</a></nobr></td></tr>
+<tr><td><nobr><a class="MenuItem" href="features.html">Features</a></nobr></td></tr>
+<tr><td><nobr><a class="MenuItem" href="http://sourceforge.net/project/showfiles.php?group_id=70325">Download</a></nobr></td></tr>
+<tr><td><span class="MenuTitle">&nbsp;</span></td></tr>
+<tr><td><span class="MenuTitle">DOCUMENTATION</span></td></tr>
+<tr><td><nobr><a class="MenuItem" href="install.html">Installation</a></nobr></td></tr>
+<tr><td><nobr><a class="MenuItem" href="servconf.html">Server Configuration</a></nobr></td></tr>
+<tr><td><nobr><a class="MenuItem" href="clilib-index.html">Client Library</a></nobr></td></tr>
+<tr><td><nobr><a class="MenuItem" href="phpext-index.html">PHP Extension</a></nobr></td></tr>
+<tr><td><nobr><a class="MenuItem" href="examples.html">Examples</a></nobr></td></tr>
+<tr><td><nobr><a class="MenuItem" href="protocol-index.html">ODBTP Protocol</a></nobr></td></tr>
+<tr><td><span class="MenuTitle">&nbsp;</span></td></tr>
+<tr><td><span class="MenuTitle">DEVELOPMENT</span></td></tr>
+<tr><td><nobr><a class="MenuItem" href="http://sourceforge.net/projects/odbtp">SF Project Page</a></nobr></td></tr>
+<tr><td><nobr><a class="MenuItem" href="http://sourceforge.net/forum/?group_id=70325">Forums</a></nobr></td></tr>
+<tr><td><nobr><a class="MenuItem" href="http://sourceforge.net/tracker/?group_id=70325&atid=527367">Bugs</a></nobr></td></tr>
+<tr><td><nobr><a class="MenuItem" href="http://sourceforge.net/cvs/?group_id=70325">CVS</a></nobr></td></tr>
+<tr><td><span class="MenuTitle">&nbsp;</span></td></tr>
+<tr><td><span class="MenuTitle">HOSTED BY</span></td></tr>
+<tr><td><a href="http://sourceforge.net"><img src="http://sourceforge.net/sflogo.php?group_id=70325&type=2" width="125" height="37" border="0" alt="SourceForge.net Logo"></a></td></tr>
+</table>
+</td>
+<td><nobr>&nbsp;&nbsp;&nbsp;&nbsp;</nobr></td>
+<td valign="top">
+<span class="PageTitle">ODBTP -- Installation</span>
+<p>
+The ODBTP client/server package requires the installation of a Win32
+service, and a C client library. While the service can only be installed
+on a Win32 host, the client library can be installed on both non-Win32
+and Win32 hosts.
+<p>
+<a href="#unpack">Unpacking the Distribution Files</a><br>
+<a href="#service">Win32 Service Installation</a><br>
+<a href="#clibunix">Client Library Installation (UNIX)</a><br>
+<a href="#clibwin32">Client Library Installation (Win32)</a><br>
+<a href="#phpstatic">PHP Extension Installation (UNIX-Static)</a><br>
+<a href="#phpshared">PHP Extension Installation (UNIX-Shared)</a><br>
+<a href="#phpwin32">PHP Extension Installation (Win32)</a><br>
+<a href="#phpnetware">PHP Extension Installation (NetWare)</a><br>
+<a href="#phpmssql">Installing PHP Extension with MSSQL Support</a><br>
+&nbsp;<br>
+&nbsp;<br>
+<h3><a name="unpack">Unpacking the Distribution Files</a></h3>
+<ol>
+<li>Download the odbtp-1.1.4.tar.gz file.
+<li>Run <code>zcat odbtp-1.1.4.tar.gz | tar xf -</code>
+</ol>
+&nbsp;<br>
+<h3><a name="service">Win32 Service Installation</a></h3>
+NOTE: The ODBTP service can only be installed on Windows NT 4.0, 2000 or XP Pro.<br>
+<ol>
+<li>Create a directory on the Windows host where the service program files will reside, i.e., <nobr><code>md odbtp</code></nobr>.
+<li>Copy the files <code>odbtpctl.exe</code>, <code>odbtpsrv.exe</code> and <code>odbtpsrv.ini</code> files from the <code>winservice</code> directory into the directory created in step 1.
+<li>Open a command prompt (cmd) window on the Windows host.
+<li>Change to the directory to which the service program files were copied, i.e., <nobr><code>cd odbtp</code></nobr>.
+<li>Run the following commands to install and start the service:<p>
+<code>&nbsp;&nbsp;&nbsp;odbtpctl install</code><br>
+<code>&nbsp;&nbsp;&nbsp;odbtpctl start</code><br>
+</ol>
+&nbsp;<br>
+<h3><a name="clibunix">Client Library Installation (UNIX)</a></h3>
+<ol>
+<li>Run <code>configure --help</code> to view available configuration options.
+<li><code>configure [options]</code>
+<li><code>make</code>
+<li><code>make install</code>
+</ol>
+&nbsp;<br>
+<h3><a name="clibwin32">Client Library Installation (Win32)</a></h3>
+NOTE: Building the client library on a Win32 platform requires
+MS Visual C++ 6.0 or later.  ODBTP 1.1.1 and later includes a
+Win32 binary build of the client library, and thus is no longer required.
+<br>
+<ol>
+<li>Open a Windows Explorer window and go to the folder containing the ODBTP distribution files.
+<li>Double-click on the <code>libodbtp.dsw</code> file.
+<li>Use the <code>Build | Set Active Configuration</code> menu option to select the <nobr><code>libodbtp - Win32 Release</code></nobr> project configuration.
+<li>Use the <code>Build | Build</code> menu option to build the project.
+<li>Copy <code>odbtp.h</code> to an "include" directory that can be accessed by projects that will be built with the ODBTP client library.
+<li>Copy <code>libodbtp.lib</code> from <code>Release</code> to a "lib" directory that can be accessed by projects that will be built with the ODBTP client library.
+</ol>
+&nbsp;<br>
+<h3><a name="phpstatic">PHP Extension Installation (UNIX-Static)</a></h3>
+NOTE: The ODBTP client library must be installed before installing the static version of the ODBTP PHP extension.
+<ol>
+<li>Copy the directory <code>odbtp</code> and all its contents from <code>php/ext</code> into <code>&lt;php source distribution directory&gt;/ext</code>.
+<li>Change to the PHP source distribution directory.
+<li>Run the command <code>buildconf</code> to rebuild the <code>configure</code> script.
+<li>Run <code>configure --with-odbtp {other configure options]</code>.
+<li>Run <code>make</code> and then <code>make install</code>.
+</ol>
+&nbsp;<br>
+<h3><a name="phpshared">PHP Extension Installation (UNIX-Shared)</a></h3>
+<ol>
+<li>Change to the directory <code>php/ext</code>.
+<li>Open the file <code>Makefile</code> in an editor, such as <code>vi</code>, and change the value of <code>PHP_INCROOT</code>, if necessary.
+<li>Run <code>make</code>.
+<li>Copy the file <code>php_odbtp.so</code> to a location where it can be loaded in a PHP script with the <code>dl()</code> function.
+</ol>
+&nbsp;<br>
+<h3><a name="phpwin32">PHP Extension Installation (Win32)</a></h3>
+NOTE: The Win32 version of the ODBTP PHP extension was built under PHP 4.4.1,
+PHP 5.0.5 and PHP 5.1.1. They may not work with other versions of PHP.
+<ol>
+<li>Copy the file <code>php_odbtp.dll</code> from the applicable <code>php-x.x.x</code> directory under <code>php/bin_win32</code> into the directory where the other Win32 PHP extensions are located.
+<li>Edit the <code>php.ini</code> file and add the line <code>extension=php_odbtp.dll</code> where the other Win32 extensions are specified.
+<li>Restart the web server used with PHP so that the extension can be loaded.
+</ol>
+&nbsp;<br>
+<h3><a name="phpnetware">PHP Extension Installation (NetWare)</a></h3>
+NOTE: The NetWare version of the ODBTP PHP extension was built under PHP 4.2.3 and PHP 5.0.4 which are the
+versions currently shipped with NetWare, and will not work with other versions of PHP4 and PHP5.
+<ol>
+<li>Copy the file <code>php_odbtp.nlm</code> from the applicable <code>php-x.x.x</code> directory under <code>php/bin_netware</code> into the directory where the other NetWare PHP extensions are located;
+usually this is <code>sys:/php4/ext</code>, or <code>sys:/php5/ext</code>.
+<li>Edit the <code>php.ini</code> file and add the line <code>extension=php_odbtp.nlm</code> where the other NetWare extensions are specified.
+<li>Restart the web server used with PHP so that the extension can be loaded.
+</ol>
+&nbsp;<br>
+<h3><a name="phpmssql">Installing PHP Extension with MSSQL Support</a></h3>
+The following provides information on how to install the ODBTP PHP extension
+with support for all of the functions from PHP's native MSSQL extension.
+<p>
+For UNIX-static installation, use <code>--with-odbtp-mssql</code> instead of
+<code>--with-odbtp</code>.<p>
+For UNIX-shared installation, uncomment the line that includes
+<code>-DODBTP_MSSQL</code> among the settings for <code>MODULE_CFLAGS</code>
+in the <code>Makefile</code>.<p>
+For Win32 installations, use <code>php_odbtp_mssql.dll</code> instead of
+<code>php_odbtp.dll</code>.<p>
+For NetWare installations, use <code>php_odbtp_mssql.nlw</code> instead of
+<code>php_odbtp.nlw</code>.<p>
+&nbsp;<br>
+</td>
+</tr>
+</table>
+</body>
+</html>

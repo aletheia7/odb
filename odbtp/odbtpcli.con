@@ -1,0 +1,3 @@
+odbtpsvr.somewhere.com
+DRIVER={SQL Server};SERVER=(local);UID=myuid;PWD=mypwd;DATABASE=master;
+EXEC sp_who

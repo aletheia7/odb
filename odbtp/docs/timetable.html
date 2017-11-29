@@ -1,0 +1,207 @@
+<html>
+<head>
+<title>timetable</title>
+</head>
+<body>
+<h3>timetable</h3>
+<dl>
+<dt><a href="#common">common.php</a>
+<dd>Common script required by all timetable scripts.
+<br>&nbsp;<br>
+<dt><a href="#connect">connect.php</a>
+<dd>Connects to database and creates the temporary table in which data will be inserted.
+<br>&nbsp;<br>
+<dt><a href="#insert">insert.php</a>
+<dd>Inserts data into the temporary table.
+<br>&nbsp;<br>
+<dt><a href="#list">list.php</a>
+<dd>Lists all data inserted into the temporary table.
+<br>&nbsp;<br>
+<dt><a href="#close">close.php</a>
+<dd>Closes the reserved database connection.
+<br>&nbsp;<br>
+</dl>
+<h3><a name="common">common.php</a></h3>
+<pre>&lt;?php
+    session_start();
+
+    $server = 'odbtp.somewhere.com';
+
+    if( ($id = $_SESSION['id']) ) {
+        if( !($con = odbtp_rconnect( $server, $id )) ) {
+            $_SESSION['id'] = NULL;
+            die;
+        }
+    }
+    else {
+        $con = NULL;
+    }
+?&gt;</pre>
+<h3><a name="connect">connect.php</a></h3>
+<pre>&lt;?php
+    require( 'common.php' );
+?&gt;
+&lt;html&gt;
+&lt;head&gt;
+&lt;title&gt;Connect&lt;/title&gt;
+&lt;/head&gt;
+&lt;body&gt;
+&lt;?php
+    if( $con ) {
+        echo "Already Connected&lt;p&gt;";
+    }
+    else {
+        $con = odbtp_rconnect( $server, 'DRIVER={SQL Server};SERVER=myserver;UID=myuid;PWD=mypwd;DATABASE=mydb;' ) or die;
+
+        $sql = "CREATE TABLE #TimeTable ( "
+             . "TimeId int, "
+             . "SqlTime datetime, "
+             . "StrTime varchar(255), "
+             . "SqlTimeNextYear datetime, "
+             . "SqlTimeServer datetime DEFAULT (getdate()) )";
+
+        $qry = odbtp_query( $sql ) or die;
+
+        echo "Connected&lt;p&gt;";
+        $id = odbtp_connect_id();
+        $_SESSION['id'] = $id;
+    }
+    odbtp_close();
+?&gt;
+&lt;a href="connect.php"&gt;Connect&lt;/a&gt;&lt;p&gt;
+&lt;a href="insert.php"&gt;Insert Data&lt;/a&gt;&lt;p&gt;
+&lt;a href="list.php"&gt;List Data&lt;/a&gt;&lt;p&gt;
+&lt;a href="close.php"&gt;Close Connection &lt;?= $id ?&gt;&lt;/a&gt;
+&lt;/body&gt;
+&lt;/html&gt;</pre>
+<h3><a name="insert">insert.php</a></h3>
+<pre>&lt;?php
+    require( 'common.php' );
+?&gt;
+&lt;html&gt;
+&lt;head&gt;
+&lt;title&gt;Insert Data&lt;/title&gt;
+&lt;/head&gt;
+&lt;body&gt;
+&lt;?php
+    if( !$con ) {
+        echo 'Not Connected&lt;p&gt;';
+    }
+    else {
+        $time = time();
+        $strtime = date ("l dS of F Y h:i:s A", $time );
+        $objtime = odbtp_ctime2datetime( $time );
+        $objtime-&gt;year += 1;
+
+        $sql = "INSERT INTO #TimeTable( TimeId, SqlTime, StrTime, SqlTimeNextYear ) "
+             . "VALUES( ?, ?, ?, ? )";
+
+        $qry = odbtp_prepare( $sql ) or die;
+        odbtp_input( $qry, 1 ) or die;
+        odbtp_input( $qry, 2 ) or die;
+        odbtp_input( $qry, 3 ) or die;
+        odbtp_input( $qry, 4 ) or die;
+
+        odbtp_set( $qry, 1, $time ) or die;
+        odbtp_set( $qry, 2, $time ) or die;
+        odbtp_set( $qry, 3, $strtime ) or die;
+        odbtp_set( $qry, 4, $objtime ) or die;
+        odbtp_execute( $qry ) or die;
+
+        echo "Data Inserted: $strtime&lt;p&gt;";
+
+        odbtp_close();
+    }
+?&gt;
+&lt;a href="connect.php"&gt;Connect&lt;/a&gt;&lt;p&gt;
+&lt;a href="insert.php"&gt;Insert Data&lt;/a&gt;&lt;p&gt;
+&lt;a href="list.php"&gt;List Data&lt;/a&gt;&lt;p&gt;
+&lt;a href="close.php"&gt;Close Connection &lt;?= $id ?&gt;&lt;/a&gt;
+&lt;/body&gt;
+&lt;/html&gt;
+&lt;?php
+    require( 'common.php' );
+?&gt;</pre>
+<h3><a name="list">list.php</a></h3>
+<pre>&lt;html&gt;
+&lt;head&gt;
+&lt;title&gt;List Data&lt;/title&gt;
+&lt;/head&gt;
+&lt;body&gt;
+&lt;?php
+    if( !$con ) {
+        echo 'Not Connected&lt;p&gt;';
+    }
+    else {
+        $sql = "SELECT * FROM #TimeTable";
+        $qry = odbtp_query( $sql ) or die;
+
+        odbtp_bind_field( $qry, 'SqlTime', ODB_CHAR ) or die;
+
+        echo "&lt;table cellpadding=2 cellspacing=0 border=1&gt;\n";
+        echo "&lt;tr&gt;&lt;td&gt;&amp;nbsp;TimeId&amp;nbsp;&lt;/td&gt;&lt;td&gt;&amp;nbsp;SqlTime&amp;nbsp;&lt;/td&gt;"
+           . "&lt;td&gt;&amp;nbsp;StrTime&amp;nbsp;&lt;/td&gt;&lt;td&gt;&amp;nbsp;SqlTimeNextYear&amp;nbsp;&lt;/td&gt;"
+           . "&lt;td&gt;&amp;nbsp;SqlTimeServer&amp;nbsp;&lt;/td&gt;&lt;/tr&gt;";
+
+        while( ($rec = odbtp_fetch_array( $qry )) ) {
+            $SqlTimeNextYear
+                = date( "l dS of F Y h:i:s A",
+                        odbtp_datetime2ctime( $rec['SqlTimeNextYear'] ) );
+
+            $SqlTimeServer
+                = sprintf( "%02d/%02d/%d %02d:%02d:%02d.%d",
+                           $rec['SqlTimeServer']-&gt;month,
+                           $rec['SqlTimeServer']-&gt;day,
+                           $rec['SqlTimeServer']-&gt;year,
+                           $rec['SqlTimeServer']-&gt;hour,
+                           $rec['SqlTimeServer']-&gt;minute,
+                           $rec['SqlTimeServer']-&gt;second,
+                           $rec['SqlTimeServer']-&gt;fraction );
+
+            echo "&lt;tr&gt;";
+            echo "&lt;td&gt;&lt;nobr&gt;&amp;nbsp;$rec[TimeId]&amp;nbsp;&lt;/nobr&gt;&lt;/td&gt;";
+            echo "&lt;td&gt;&lt;nobr&gt;&amp;nbsp;$rec[SqlTime]&amp;nbsp;&lt;/nobr&gt;&lt;/td&gt;";
+            echo "&lt;td&gt;&lt;nobr&gt;&amp;nbsp;$rec[StrTime]&amp;nbsp;&lt;/nobr&gt;&lt;/td&gt;";
+            echo "&lt;td&gt;&lt;nobr&gt;&amp;nbsp;$SqlTimeNextYear&amp;nbsp;&lt;/nobr&gt;&lt;/td&gt;";
+            echo "&lt;td&gt;&lt;nobr&gt;&amp;nbsp;$SqlTimeServer&amp;nbsp;&lt;/nobr&gt;&lt;/td&gt;";
+            echo "&lt;/tr&gt;";
+        }
+        echo "&lt;/table&gt;&lt;p&gt;\n";
+
+        odbtp_close();
+    }
+?&gt;
+&lt;a href="connect.php"&gt;Connect&lt;/a&gt;&lt;p&gt;
+&lt;a href="insert.php"&gt;Insert Data&lt;/a&gt;&lt;p&gt;
+&lt;a href="list.php"&gt;List Data&lt;/a&gt;&lt;p&gt;
+&lt;a href="close.php"&gt;Close Connection &lt;?= $id ?&gt;&lt;/a&gt;
+&lt;/body&gt;
+&lt;/html&gt;</pre>
+<h3><a name="close">close.php</a></h3>
+<pre>&lt;?php
+    require( 'common.php' );
+?&gt;
+&lt;html&gt;
+&lt;head&gt;
+&lt;title&gt;Close Connection&lt;/title&gt;
+&lt;/head&gt;
+&lt;body&gt;
+&lt;?php
+    if( !$con ) {
+        echo 'Not Connected&lt;p&gt;';
+    }
+    else {
+        odbtp_close( $con, TRUE );
+        echo "Connection Closed&lt;p&gt;";
+        $id = NULL;
+        $_SESSION['id'] = $id;
+    }
+?&gt;
+&lt;a href="connect.php"&gt;Connect&lt;/a&gt;&lt;p&gt;
+&lt;a href="insert.php"&gt;Insert Data&lt;/a&gt;&lt;p&gt;
+&lt;a href="list.php"&gt;List Data&lt;/a&gt;&lt;p&gt;
+&lt;a href="close.php"&gt;Close Connection &lt;?= $id ?&gt;&lt;/a&gt;
+&lt;/body&gt;
+&lt;/html&gt;</pre>
+</body>
+</html>

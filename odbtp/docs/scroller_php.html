@@ -1,0 +1,142 @@
+<html>
+<head>
+<title>scroller.php</title>
+</head>
+<body>
+<h3>scroller.php</h3>
+<pre>&lt;?php
+    session_start();
+?&gt;
+&lt;html&gt;
+&lt;head&gt;
+&lt;title&gt;ODBTP Scroller&lt;/title&gt;
+&lt;/head&gt;
+&lt;body&gt;
+&lt;?php
+    $server = 'odbtp.somewhere.com';
+
+    if( !$_SESSION['id'] ) {
+        $con = odbtp_rconnect( $server,
+                               'DRIVER={SQL Server};SERVER=myserver;UID=myuid;PWD=mypwd;DATABASE=mydb;' ) or die;
+        $_SESSION['id'] = odbtp_connect_id();;
+        $qry = odbtp_allocate_query( $con ) or die;
+        odbtp_set_cursor( $qry, ODB_CURSOR_STATIC, 0, TRUE ) or die;
+    }
+    else {
+        if( !($con = odbtp_rconnect( $server, $_SESSION['id'] )) ) {
+            $_SESSION['id'] = NULL;
+            die;
+        }
+        $qry = odbtp_get_query( $con );
+    }
+    switch( $_REQUEST['action'] ) {
+        case 'QUERY': odbtp_query( $_REQUEST['query'], $qry ) or die;
+                      $fetch_type = ODB_FETCH_NEXT;
+                      $fetch_param = 0;
+                      break;
+
+        case 'FIRST': $fetch_type = ODB_FETCH_FIRST;
+                      $fetch_param = 0;
+                      break;
+
+        case 'PREV': $fetch_type = ODB_FETCH_PREV;
+                     $fetch_param = 0;
+                     break;
+
+        case 'NEXT': $fetch_type = ODB_FETCH_NEXT;
+                     $fetch_param = 0;
+                     break;
+
+        case 'LAST': $fetch_type = ODB_FETCH_LAST;
+                     $fetch_param = 0;
+                     break;
+
+        case 'ABSOLUTE': $fetch_type = ODB_FETCH_ABS;
+                         $fetch_param = $_REQUEST['absolute_param'];
+                         break;
+
+        case 'RELATIVE': $fetch_type = ODB_FETCH_REL;
+                         $fetch_param = $_REQUEST['relative_param'];
+                         break;
+
+        case 'BOOKMARK': $fetch_type = ODB_FETCH_BOOKMARK;
+                         $fetch_param = $_REQUEST['bookmark_param'];
+                         break;
+
+        case 'BOOKMARK ROW': odbtp_row_bookmark( $qry ) or die;
+                             $fetch_type = ODB_FETCH_BOOKMARK;
+                             $fetch_param = 0;
+                             break;
+
+        case 'CLOSE': odbtp_close( $con, TRUE );
+                      $_SESSION['id'] = NULL;
+                      die( 'Connection Closed.&lt;p&gt;&lt;a href="scroller.htm"&gt;New Query&lt;/a&gt;' );
+                      break;
+    }
+    $cols = odbtp_num_fields( $qry ) or die( 'No Rows. &lt;a href="scroller.htm"&gt;New Query&lt;/a&gt;' );
+?&gt;
+&lt;form action="scroller.php" method="POST"&gt;
+&lt;table cellpadding=0 cellspacing=8 border=0&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;nobr&gt;
+&lt;input type="submit" name="action" value="FIRST"&gt;
+&lt;input type="submit" name="action" value="PREV"&gt;
+&lt;input type="submit" name="action" value="NEXT"&gt;
+&lt;input type="submit" name="action" value="LAST"&gt;
+&amp;nbsp;
+&lt;input type="submit" name="action" value="BOOKMARK ROW"&gt;
+&lt;input type="submit" name="action" value="CLOSE"&gt;&amp;nbsp;
+&lt;a href="scroller.htm"&gt;New Query&lt;/a&gt;
+&lt;/nobr&gt;&lt;/td&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;nobr&gt;
+&lt;input type="text" size="5" name="absolute_param" value="1"&gt;
+&lt;input type="submit" name="action" value="ABSOLUTE"&gt;&amp;nbsp;
+&lt;input type="text" size="5" name="relative_param" value="0"&gt;
+&lt;input type="submit" name="action" value="RELATIVE"&gt;&amp;nbsp;
+&lt;input type="text" size="5" name="bookmark_param" value="0"&gt;
+&lt;input type="submit" name="action" value="BOOKMARK"&gt;
+&lt;/nobr&gt;&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/table&gt;
+
+&lt;?php
+    $rec = odbtp_fetch_array( $qry, $fetch_type, $fetch_param );
+
+    echo "&lt;p&gt;";
+    echo odbtp_affected_rows( $qry );
+    echo " rows&lt;p&gt;\n";
+    echo "&lt;table cellpadding=2 cellspacing=0 border=0&gt;\n";
+
+    if( $rec ) {
+        for( $col = 0; $col &lt; $cols; $col++ ) {
+            echo "&lt;tr&gt;";
+            echo '&lt;td align="right" valign="top"&gt;&lt;small&gt;&lt;nobr&gt;&lt;b&gt;';
+            echo odbtp_field_name( $qry, $col );
+            echo ':&amp;nbsp;&amp;nbsp;&lt;/b&gt;&lt;/nobr&gt;&lt;/small&gt;&lt;/td&gt;';
+            if( !is_null( $rec[$col] ) )
+                echo "&lt;td&gt;$rec[$col]&lt;/td&gt;";
+            else
+                echo '&lt;td&gt;NULL&lt;/td&gt;';
+            echo "&lt;/tr&gt;\n";
+        }
+    }
+    else {
+        for( $col = 0; $col &lt; $cols; $col++ ) {
+            echo "&lt;tr&gt;";
+            echo '&lt;td align="right" valign="top"&gt;&lt;small&gt;&lt;nobr&gt;&lt;b&gt;';
+            echo odbtp_field_name( $qry, $col );
+            echo ':&amp;nbsp;&amp;nbsp;&lt;/b&gt;&lt;/nobr&gt;&lt;/small&gt;&lt;/td&gt;';
+            if( $col == 0 )
+                echo "&lt;td rowspan=\"$cols\" valign=\"top\"&gt;NO DATA&lt;/td&gt;";
+            echo "&lt;/tr&gt;\n";
+        }
+    }
+    echo "&lt;/table&gt;&lt;p&gt;\n";
+
+    odbtp_close( $con );
+?&gt;
+&lt;/body&gt;
+&lt;/html&gt;</pre>
+</body>
+</html>

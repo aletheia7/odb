@@ -1,0 +1,62 @@
+<html>
+<head>
+<title>query.php</title>
+</head>
+<body>
+<h3>query.php</h3>
+<pre>&lt;html&gt;
+&lt;head&gt;
+&lt;title&gt;ODBTP Database Query Results&lt;/title&gt;
+&lt;meta http-equiv="Content-Type" content="text/html; charset=utf-8"&gt;
+&lt;/head&gt;
+&lt;body&gt;
+&lt;?php
+
+    $con = odbtp_connect( 'odbtp.somewhere.com',
+                          'DRIVER={SQL Server};SERVER=myserver;UID=myuid;PWD=mypwd;DATABASE=mydb;' ) or die;
+
+    odbtp_set_attr( ODB_ATTR_FULLCOLINFO, TRUE );
+
+    $qry = odbtp_query( $_REQUEST['query'] ) or die;
+
+    do {
+        if( ($msg = odbtp_get_message( $qry )) ) {
+            echo "MESSAGE: $msg&lt;p&gt;";
+            continue;
+        }
+        if( ($cols = odbtp_num_fields( $qry )) == 0 ) {
+            echo odbtp_affected_rows( $qry );
+            echo " rows affected&lt;p&gt;\n";
+            continue;
+        }
+        echo "&lt;table cellpadding=2 cellspacing=0 border=1&gt;\n";
+        echo "&lt;tr&gt;";
+        for( $col = 0; $col &lt; $cols; $col++ ) {
+            echo "&lt;td&gt;&lt;nobr&gt;&nbsp;" . odbtp_field_name( $qry, $col );
+            echo " (" . odbtp_field_type( $qry, $col ) . ")&nbsp;&lt;/nobr&gt;&lt;/td&gt;";
+            if( odbtp_field_bindtype( $qry, $col ) == ODB_DATETIME )
+                odbtp_bind_field( $qry, $col, ODB_CHAR );
+        }
+        echo "&lt;/tr&gt;\n";
+
+        while( ($rec = odbtp_fetch_array($qry)) ) {
+            echo "&lt;tr&gt;";
+            for( $col = 0; $col &lt; $cols; $col++ ) {
+                if( is_null( $rec[$col] ) ) $rec[$col] = "NULL";
+                echo "&lt;td&gt;&lt;nobr&gt;&nbsp;$rec[$col]&nbsp;&lt;/nobr&gt;&lt;/td&gt;";
+            }
+            echo "&lt;/tr&gt;\n";
+        }
+        echo "&lt;/table&gt;&lt;p&gt;\n";
+
+        echo odbtp_affected_rows( $qry );
+        echo " rows affected&lt;p&gt;\n";
+    }
+    while( odbtp_next_result( $qry ) );
+
+    odbtp_close();
+?&gt;
+&lt;/body&gt;
+&lt;/html&gt;</pre>
+</body>
+</html>

@@ -1,0 +1,12 @@
+Release
+Debug
+Makefile
+config.cache
+config.h
+config.log
+config.status
+odbtpcli
+stamp-h
+*.ncb
+*.plg
+*.opt

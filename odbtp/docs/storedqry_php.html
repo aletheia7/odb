@@ -1,0 +1,87 @@
+<html>
+<head>
+<title>storedqry.php</title>
+</head>
+<body>
+<h3>storedqry.php</h3>
+<pre>&lt;html&gt;
+&lt;head&gt;
+&lt;title&gt;MS Access Stored Query&lt;/title&gt;
+&lt;/head&gt;
+&lt;body&gt;
+&lt;?php
+    $dbc = 'DRIVER={Microsoft Access Driver (*.mdb)};DBQ=c:\NorthWind.mdb;UID=admin;PWD=;';
+    $con = odbtp_connect( 'localhost', $dbc ) or die;
+
+    $qry = odbtp_prepare_proc( "Employee Sales by Country" ) or die;
+
+    odbtp_attach_param( $qry, "[Beginning Date]", $BegDate ) or die;
+    odbtp_attach_param( $qry, "[Ending Date]", $EndDate ) or die;
+
+    $BegDate = odbtp_new_datetime();
+    $EndDate = odbtp_new_datetime();
+
+    $BegDate-&gt;year = 1996;
+    $BegDate-&gt;month = 1;
+    $BegDate-&gt;day = 1;
+
+    $EndDate-&gt;year = 1996;
+    $EndDate-&gt;month = 12;
+    $EndDate-&gt;day = 31;
+
+    odbtp_execute( $qry ) or die;
+
+    $cols = odbtp_num_fields( $qry ) or die( 'UGH' );
+
+    echo "&lt;table cellpadding=2 cellspacing=0 border=1&gt;\n";
+    echo "&lt;tr&gt;";
+    while( ($f = odbtp_fetch_field( $qry )) ) {
+        echo "&lt;td&gt;&lt;nobr&gt;&nbsp;" . $f-&gt;name . " (" . $f-&gt;type . ")&nbsp;&lt;/nobr&gt;&lt;/td&gt;";
+    }
+    echo "&lt;/tr&gt;\n";
+
+    while( ($rec = odbtp_fetch_array($qry)) ) {
+        echo "&lt;tr&gt;";
+        for( $col = 0; $col &lt; $cols; $col++ ) {
+            if( is_null( $rec[$col] ) ) $rec[$col] = "NULL";
+            echo "&lt;td&gt;&lt;nobr&gt;&nbsp;$rec[$col]&nbsp;&lt;/nobr&gt;&lt;/td&gt;";
+        }
+        echo "&lt;/tr&gt;\n";
+    }
+    echo "&lt;/table&gt;&lt;p&gt;\n";
+
+    $BegDate-&gt;year = 1997;
+    $BegDate-&gt;month = 1;
+    $BegDate-&gt;day = 1;
+
+    $EndDate-&gt;year = 1997;
+    $EndDate-&gt;month = 12;
+    $EndDate-&gt;day = 31;
+
+    odbtp_execute( $qry ) or die;
+
+    $cols = odbtp_num_fields( $qry ) or die( 'UGH' );
+
+    echo "&lt;table cellpadding=2 cellspacing=0 border=1&gt;\n";
+    echo "&lt;tr&gt;";
+    while( ($f = odbtp_fetch_field( $qry )) ) {
+        echo "&lt;td&gt;&lt;nobr&gt;&nbsp;" . $f-&gt;name . " (" . $f-&gt;type . ")&nbsp;&lt;/nobr&gt;&lt;/td&gt;";
+    }
+    echo "&lt;/tr&gt;\n";
+
+    while( ($rec = odbtp_fetch_array($qry)) ) {
+        echo "&lt;tr&gt;";
+        for( $col = 0; $col &lt; $cols; $col++ ) {
+            if( is_null( $rec[$col] ) ) $rec[$col] = "NULL";
+            echo "&lt;td&gt;&lt;nobr&gt;&nbsp;$rec[$col]&nbsp;&lt;/nobr&gt;&lt;/td&gt;";
+        }
+        echo "&lt;/tr&gt;\n";
+    }
+    echo "&lt;/table&gt;&lt;p&gt;\n";
+
+    odbtp_close();
+?&gt;
+&lt;/body&gt;
+&lt;/html&gt;</pre>
+</body>
+</html>

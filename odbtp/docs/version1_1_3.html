@@ -1,0 +1,71 @@
+<html>
+<head>
+<title>ODBTP Version 1.1.3</title>
+<link href="main.css" rel="stylesheet" type="text/css">
+</head>
+<body>
+<table cellspacing="0" cellpadding="0" border="0">
+<tr>
+<td valign="top">
+<table cellspacing="3" cellpadding="0" border="0">
+<tr><td><nobr><a class="MenuItem" href="index.html">Home Page</a></nobr></td></tr>
+<tr><td><nobr><a class="MenuItem" href="features.html">Features</a></nobr></td></tr>
+<tr><td><nobr><a class="MenuItem" href="http://sourceforge.net/project/showfiles.php?group_id=70325">Download</a></nobr></td></tr>
+<tr><td><span class="MenuTitle">&nbsp;</span></td></tr>
+<tr><td><span class="MenuTitle">DOCUMENTATION</span></td></tr>
+<tr><td><nobr><a class="MenuItem" href="install.html">Installation</a></nobr></td></tr>
+<tr><td><nobr><a class="MenuItem" href="servconf.html">Server Configuration</a></nobr></td></tr>
+<tr><td><nobr><a class="MenuItem" href="clilib-index.html">Client Library</a></nobr></td></tr>
+<tr><td><nobr><a class="MenuItem" href="phpext-index.html">PHP Extension</a></nobr></td></tr>
+<tr><td><nobr><a class="MenuItem" href="examples.html">Examples</a></nobr></td></tr>
+<tr><td><nobr><a class="MenuItem" href="protocol-index.html">ODBTP Protocol</a></nobr></td></tr>
+<tr><td><span class="MenuTitle">&nbsp;</span></td></tr>
+<tr><td><span class="MenuTitle">DEVELOPMENT</span></td></tr>
+<tr><td><nobr><a class="MenuItem" href="http://sourceforge.net/projects/odbtp">SF Project Page</a></nobr></td></tr>
+<tr><td><nobr><a class="MenuItem" href="http://sourceforge.net/forum/?group_id=70325">Forums</a></nobr></td></tr>
+<tr><td><nobr><a class="MenuItem" href="http://sourceforge.net/tracker/?group_id=70325&atid=527367">Bugs</a></nobr></td></tr>
+<tr><td><nobr><a class="MenuItem" href="http://sourceforge.net/cvs/?group_id=70325">CVS</a></nobr></td></tr>
+<tr><td><span class="MenuTitle">&nbsp;</span></td></tr>
+<tr><td><span class="MenuTitle">HOSTED BY</span></td></tr>
+<tr><td><a href="http://sourceforge.net"><img src="http://sourceforge.net/sflogo.php?group_id=70325&type=2" width="125" height="37" border="0" alt="SourceForge.net Logo"></a></td></tr>
+</table>
+</td>
+<td><nobr>&nbsp;&nbsp;&nbsp;&nbsp;</nobr></td>
+<td valign="top">
+<span class="PageTitle">ODBTP -- Version 1.1.3 Changes</span>
+<p>
+<dl>
+<dt><b>Fixed Bugs</b>
+<dd>
+Fixed the problem in service that was causing a numveric overflow error
+when smalldatetime fields are converted to character format.
+<p>
+Fixed the PHP extension's mssql_bind() alias definition. The third
+argument is now forced to be passed by reference.
+<p>
+Fixed the C client library functions that would cause PHP client
+applications to crash when retrieving the name of a prepared
+parameter that was not bounded.
+<br>&nbsp;<br>
+</dd>
+<dt><b>Support for building shared version of C client library</b>
+<dd>
+Support for building both shared and static versions of the C client
+library was added to the configure process. A Visual C++ project for
+building a Win32 DLL version of the C client library was also added to
+the package.
+<br>&nbsp;<br>
+</dd>
+<dt><b>Native support for GUID fields and parameters</b>
+<dd>
+Support for reading and writing GUID (uniqueidentifier) data
+was added to the ODBTP server, client library and PHP extension. GUID
+field and parameter data can now be easily processed.
+<br>&nbsp;<br>
+</dd>
+</dl>
+</td>
+</tr>
+</table>
+</body>
+</html>

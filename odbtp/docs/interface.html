@@ -1,0 +1,251 @@
+<html>
+<head>
+<title>ODBTP Interface File</title>
+<link href="main.css" rel="stylesheet" type="text/css">
+</head>
+<body>
+<span class="PageTitle">ODBTP -- Interface File</span>
+<h3>What is an interface file?</h3>
+An interface file is a file used by
+<a href="clilib.html#odbLoginInterface">odbLoginInterface</a> to facilitate
+the establishment of a connection to a database. It contains a list of
+interfaces to databases via an ODBTP server.  Each interface is uniquely
+named, and specifies the values of one or more parameters that determine
+how to connect to a database.
+Interfaces are entered into the file using the following format:
+<pre>
+[interface_name]
+parameter1 = value
+parameter2 = value
+   .
+   .
+   ,
+parameterN = value
+</pre>
+A special interface named "global" can be used to globally define default
+values for certain parameters.
+<h3><a name="parameters">Interface Parameters</a></h3>
+<table cellpadding="5" cellspacing="0" border="1">
+<tr><td><b>Parameter</b></td><td><b>Description</b></td><td><b>Default</b></td></tr>
+<tr>
+<td valign="top"><nobr>connect timeout</nobr></td>
+<td valign="top">
+Client connection timeout specified in seconds.
+</td>
+<td valign="top">0</td>
+</tr>
+<tr>
+<td valign="top"><nobr>convert all</nobr></td>
+<td valign="top">
+Convert all fields to character format.
+</td>
+<td valign="top">no</td>
+</tr>
+<tr>
+<td valign="top"><nobr>convert datetime</nobr></td>
+<td valign="top">
+Convert datetime fields to character format.
+</td>
+<td valign="top">no</td>
+</tr>
+<tr>
+<td valign="top"><nobr>convert guid</nobr></td>
+<td valign="top">
+Convert GUID (uniqueidentifier) fields to character format.
+</td>
+<td valign="top">no</td>
+</tr>
+<tr>
+<td valign="top"><nobr>data connect string</nobr></td>
+<td valign="top">
+ODBC connect string. The following identifiers representing other interface
+parameters or data can be embedded in the string:<p>
+%d - database, dbq or dsn name<br>
+%p - password<br>
+%r - driver name<br>
+%s - server name<br>
+%u - username
+</td>
+<td valign="top">See <a href="#types">types</a></td>
+</tr>
+<tr>
+<td valign="top"><nobr>database</nobr></td>
+<td valign="top">
+Name of database.
+</td>
+<td valign="top">&nbsp;</td>
+</tr>
+<tr>
+<td valign="top"><nobr>driver</nobr></td>
+<td valign="top">
+Name of ODBC driver.
+</td>
+<td valign="top">See <a href="#types">types</a></td>
+</tr>
+<tr>
+<td valign="top"><nobr>full col info</nobr></td>
+<td valign="top">
+Send full column info.
+</td>
+<td valign="top">no</td>
+</tr>
+<tr>
+<td valign="top"><nobr>load data types</nobr></td>
+<td valign="top">
+Load data type info.
+</td>
+<td valign="top">no</td>
+</tr>
+<tr>
+<td valign="top"><nobr>login type</nobr></td>
+<td valign="top">
+ODBTP login type override.  Possible values are single, reserved or normal.
+</td>
+<td valign="top">&nbsp;</td>
+</tr>
+<tr>
+<td valign="top"><nobr>odbtp host</nobr></td>
+<td valign="top">
+Host name of odbtp service.
+</td>
+<td valign="top">interface<br>name</td>
+</tr>
+<tr>
+<td valign="top"><nobr>odbtp port</nobr></td>
+<td valign="top">
+Port used for odbtp serice.
+</td>
+<td valign="top">2799</td>
+</tr>
+<tr>
+<td valign="top"><nobr>read timeout</nobr></td>
+<td valign="top">
+Client read timeout specified in seconds.
+</td>
+<td valign="top">600</td>
+</tr>
+<tr>
+<td valign="top"><nobr>right trim text</nobr></td>
+<td valign="top">
+Remove trailing space characters from text data during retrieval.
+</td>
+<td valign="top">no</td>
+</tr>
+<tr>
+<td valign="top"><nobr>row cache size</nobr></td>
+<td valign="top">
+Size of row cache if row cache usage enabled.  If is is set to 0, then
+the size will be allowed to grow to store all result rows into the cache.
+</td>
+<td valign="top">0</td>
+</tr>
+<tr>
+<td valign="top"><nobr>server</nobr></td>
+<td valign="top">
+Name of database server.
+</td>
+<td valign="top">interface<br>name</td>
+</tr>
+<tr>
+<td valign="top"><nobr>type</nobr></td>
+<td valign="top">
+Database type. See <a href="#types">types</a> for list of valid entries.
+</td>
+<td valign="top">dsn</td>
+</tr>
+<tr>
+<td valign="top"><nobr>unicode sql</nobr></td>
+<td valign="top">
+Read SQL query strings as UTF8 encoded UNICODE strings.
+</td>
+<td valign="top">no</td>
+</tr>
+<tr>
+<td valign="top"><nobr>use broad types</nobr></td>
+<td valign="top">
+Use broad data type names instead of more descriptive type names.
+</td>
+<td valign="top">no</td>
+</tr>
+<tr>
+<td valign="top"><nobr>use row cache</nobr></td>
+<td valign="top">
+Use row cache to store results.
+</td>
+<td valign="top">no</td>
+</tr>
+<tr>
+<td valign="top"><nobr>var data size</nobr></td>
+<td valign="top">
+Maximum size of buffer for variable length data if it is not
+explicitly specified when binding a column or parameter.
+</td>
+<td valign="top">65536</td>
+</tr>
+</table>
+<h3><a name="types">Database Types</a></h3>
+<table cellpadding="5" cellspacing="0" border="1">
+<tr><td><b>Type</b></td><td><b><nobr>Driver</nobr></b></td><td><b><nobr>Data connect string</nobr></b></td></tr>
+<tr>
+<td valign="top">access</td>
+<td valign="top"><nobr>Microsoft Access Driver (*.mdb)</nobr></td>
+<td valign="top"><nobr>DRIVER={%r};DBQ=%d;UID=%u;PWD=%p;</nobr></td>
+</tr>
+<tr>
+<td valign="top">db2</td>
+<td valign="top"><nobr>IBM DB2 ODBC Driver</nobr></td>
+<td valign="top"><nobr>DRIVER={%r};HOSTNAME=%s;PORT=50000;PROTOCOL=TCPIP;UID=%u;PWD=%p;DATABASE=%d;</nobr></td>
+</tr>
+<tr>
+<td valign="top">dsn</td>
+<td valign="top"><nobr>N/A</nobr></td>
+<td valign="top"><nobr>DSN=%d;UID=%u;PWD=%p;</nobr></td>
+</tr>
+<tr>
+<td valign="top">excel</td>
+<td valign="top"><nobr>Microsoft Excel Driver (*.xls)</nobr></td>
+<td valign="top"><nobr>DRIVER={%r};DRIVERID=790;DBQ=%d;</nobr></td>
+</tr>
+<tr>
+<td valign="top">foxpro</td>
+<td valign="top"><nobr>Microsoft Visual FoxPro Driver</nobr></td>
+<td valign="top"><nobr>DRIVER={%r};SOURCETYPE=DBF;SOURCEDB=%d;EXCLUSIVE=NO;</nobr></td>
+</tr>
+<tr>
+<td valign="top">foxpro_dbc</td>
+<td valign="top"><nobr>Microsoft Visual FoxPro Driver</nobr></td>
+<td valign="top"><nobr>DRIVER={%r};SOURCETYPE=DBC;SOURCEDB=%d;EXCLUSIVE=NO;</nobr></td>
+</tr>
+<tr>
+<td valign="top">general</td>
+<td valign="top"><nobr>Must be defined</nobr></td>
+<td valign="top"><nobr>Must be defined</nobr></td>
+</tr>
+<tr>
+<td valign="top">mssql</td>
+<td valign="top"><nobr>SQL Server</nobr></td>
+<td valign="top"><nobr>DRIVER={%r};SERVER=%s;UID=%u;PWD=%p;DATABASE=%d;</nobr></td>
+</tr>
+<tr>
+<td valign="top">mysql</td>
+<td valign="top"><nobr>MySQL ODBC 3.51 Driver</nobr></td>
+<td valign="top"><nobr>DRIVER={%r};SERVER=%s;OPTION=3;UID=%u;PWD=%p;DATABASE=%d;</nobr></td>
+</tr>
+<tr>
+<td valign="top">oracle</td>
+<td valign="top"><nobr>Oracle ODBC Driver</nobr></td>
+<td valign="top"><nobr>DRIVER={%r};DBQ=%d;UID=%u;PWD=%p;</nobr></td>
+</tr>
+<tr>
+<td valign="top">sybase</td>
+<td valign="top"><nobr>Sybase ASE ODBC Driver</nobr></td>
+<td valign="top"><nobr>DRIVER={%r};SRVR=%s;UID=%u;PWD=%p;DATABASE=%d;</nobr></td>
+</tr>
+<tr>
+<td valign="top">text</td>
+<td valign="top"><nobr>Microsoft Text Driver (*.txt; *.csv)</nobr></td>
+<td valign="top"><nobr>DRIVER={%r};DBQ=%d;EXTENSIONS=asc,csv,tab,txt;</nobr></td>
+</tr>
+</table>
+</body>
+</html>

@@ -1,0 +1,74 @@
+<html>
+<head>
+<title>ODBTP Server Configuration</title>
+<meta name="keywords" content="ODBTP, ODBC Drivers, Microsoft SQL Server, Microsoft Access, Oracle, Sybase, Database, PHP, UNIX, Linux">
+<meta name="Description" content="Provides remote access to ODBC without requiring local ODBC facilities.">
+<link href="main.css" rel="stylesheet" type="text/css">
+</head>
+<body>
+<table cellspacing="0" cellpadding="0" border="0">
+<tr>
+<td valign="top">
+<table cellspacing="3" cellpadding="0" border="0">
+<tr><td><nobr><a class="MenuItem" href="index.html">Home Page</a></nobr></td></tr>
+<tr><td><nobr><a class="MenuItem" href="features.html">Features</a></nobr></td></tr>
+<tr><td><nobr><a class="MenuItem" href="http://sourceforge.net/project/showfiles.php?group_id=70325">Download</a></nobr></td></tr>
+<tr><td><span class="MenuTitle">&nbsp;</span></td></tr>
+<tr><td><span class="MenuTitle">DOCUMENTATION</span></td></tr>
+<tr><td><nobr><a class="MenuItem" href="install.html">Installation</a></nobr></td></tr>
+<tr><td><nobr><a class="MenuItem" href="servconf.html">Server Configuration</a></nobr></td></tr>
+<tr><td><nobr><a class="MenuItem" href="clilib-index.html">Client Library</a></nobr></td></tr>
+<tr><td><nobr><a class="MenuItem" href="phpext-index.html">PHP Extension</a></nobr></td></tr>
+<tr><td><nobr><a class="MenuItem" href="examples.html">Examples</a></nobr></td></tr>
+<tr><td><nobr><a class="MenuItem" href="protocol-index.html">ODBTP Protocol</a></nobr></td></tr>
+<tr><td><span class="MenuTitle">&nbsp;</span></td></tr>
+<tr><td><span class="MenuTitle">DEVELOPMENT</span></td></tr>
+<tr><td><nobr><a class="MenuItem" href="http://sourceforge.net/projects/odbtp">SF Project Page</a></nobr></td></tr>
+<tr><td><nobr><a class="MenuItem" href="http://sourceforge.net/forum/?group_id=70325">Forums</a></nobr></td></tr>
+<tr><td><nobr><a class="MenuItem" href="http://sourceforge.net/tracker/?group_id=70325&atid=527367">Bugs</a></nobr></td></tr>
+<tr><td><nobr><a class="MenuItem" href="http://sourceforge.net/cvs/?group_id=70325">CVS</a></nobr></td></tr>
+<tr><td><span class="MenuTitle">&nbsp;</span></td></tr>
+<tr><td><span class="MenuTitle">HOSTED BY</span></td></tr>
+<tr><td><a href="http://sourceforge.net"><img src="http://sourceforge.net/sflogo.php?group_id=70325&type=2" width="125" height="37" border="0" alt="SourceForge.net Logo"></a></td></tr>
+</table>
+</td>
+<td><nobr>&nbsp;&nbsp;&nbsp;&nbsp;</nobr></td>
+<td valign="top">
+<span class="PageTitle">ODBTP -- Server Configuration</span>
+<p>
+The default behavior of the ODBTP Win32 service can be changed according to
+configuration parameter settings specified in the <code>odbtpsrv.ini</code> file.
+The available parameters are listed and described below in the table.
+Configuration changes will not take effect until the service is restarted with
+the commang <code>odbtpctl restart</code> or the Service Control Manager.
+<p>
+<table cellpadding="5" cellspacing="0" border="1">
+<tr><td valign="top"><b>Parameter</b></td><td><b>Description</b></td></tr>
+<tr><td valign="top">LogFile</td><td>Location and name of access/error log file. Default: odbtpsrv.log</td></tr>
+<tr><td valign="top">EnableLog</td><td>Enable or disable logging. Value can either be 1 (enabled) or 0 (disabled). Default: 1</td></tr>
+<tr><td valign="top">LogReadAndSent</td><td>Log read and sent ODBTP codes. Value can either be 1 (enabled) or 0 (disabled). Default: 0</td></tr>
+<tr><td valign="top">LogODBC</td><td>Log ODBC info and error messages. Value can either be 1 (enabled) or 0 (disabled). Default: 0</td></tr>
+<tr><td valign="top">Port</td><td>Server TCP port. Default: 2799</td></tr>
+<tr><td valign="top">ListenBacklog</td><td>Size of listener socket backlog. Default: 32</td></tr>
+<tr><td valign="top">MaxClientThreads</td><td>Maximum simultaneous client threads. Default: 256</td></tr>
+<tr><td valign="top">MaxActiveClientThreads</td><td>Maximum simultaneous active client threads. Default: 32</td></tr>
+<tr><td valign="top">ClientThreadWaitTimeout</td><td>Maximum time in seconds a client thread will wait to become active. Default: 60</td></tr>
+<tr><td valign="top">ReadTimeout</td><td>Client socket read timeout in seconds. Default: 180</td></tr>
+<tr><td valign="top">TransBufferSize</td><td>Packet transfer buffer size in bytes. Default: 4096</td></tr>
+<tr><td valign="top">MaxRequestSize</td><td>Maximum client data request size in bytes. Default: 2000000</td></tr>
+<tr><td valign="top">ConnPoolSize</td><td>Normal connection pool size. Default: 32</td></tr>
+<tr><td valign="top">ConnPoolTimeout</td><td>Normal connection pool timeout in seconds. Default: 300</td></tr>
+<tr><td valign="top">ReservConnPoolSize</td><td>Reserved connection pool size. Default: 24</td></tr>
+<tr><td valign="top">ReservConnPoolTimeout</td><td>Reserved connection pool timeout in seconds. Default: 3600</td></tr>
+<tr><td valign="top">BadConnCheck</td><td>Enable or disable bad connection check. Value is either 1 (enabled) or 0 (disabled). Default: 0</td></tr>
+<tr><td valign="top">MaxQrysPerConn</td><td>Maximum number of query handles per connection. Default: 4</td></tr>
+<tr><td valign="top">ConnectTimeout</td><td>Database connection timeout in seconds. Default: 0</td></tr>
+<tr><td valign="top">QueryTimeout</td><td>Database query timeout in seconds. Default: 0</td></tr>
+<tr><td valign="top">FetchRowCount</td><td>Number of rows to send per non-cursor FETCHROW requests. Default: 64</td></tr>
+<tr><td valign="top">EnableProcCache</td><td>Enable or disable prepared procedure parameter cache. Value is either 1 (enabled) or 0 (disabled). Default: 0</td></tr>
+</table>
+</td>
+</tr>
+</table>
+</body>
+</html>

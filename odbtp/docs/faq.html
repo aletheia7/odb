@@ -1,0 +1,169 @@
+<html>
+<head>
+<title>ODBTP FAQ</title>
+<meta name="keywords" content="ODBTP, ODBC Drivers, Microsoft SQL Server, Microsoft Access, Oracle, Sybase, Database, PHP, UNIX, Linux">
+<meta name="Description" content="Provides remote access to ODBC without requiring local ODBC facilities.">
+<link href="main.css" rel="stylesheet" type="text/css">
+</head>
+<body>
+<table cellspacing="0" cellpadding="0" border="0">
+<tr>
+<td valign="top">
+<table cellspacing="3" cellpadding="0" border="0">
+<tr><td><nobr><a class="MenuItem" href="index.html">Home Page</a></nobr></td></tr>
+<tr><td><nobr><a class="MenuItem" href="features.html">Features</a></nobr></td></tr>
+<tr><td><nobr><a class="MenuItem" href="http://sourceforge.net/project/showfiles.php?group_id=70325">Download</a></nobr></td></tr>
+<tr><td><span class="MenuTitle">&nbsp;</span></td></tr>
+<tr><td><span class="MenuTitle">DOCUMENTATION</span></td></tr>
+<tr><td><nobr><a class="MenuItem" href="install.html">Installation</a></nobr></td></tr>
+<tr><td><nobr><a class="MenuItem" href="servconf.html">Server Configuration</a></nobr></td></tr>
+<tr><td><nobr><a class="MenuItem" href="clilib-index.html">Client Library</a></nobr></td></tr>
+<tr><td><nobr><a class="MenuItem" href="phpext-index.html">PHP Extension</a></nobr></td></tr>
+<tr><td><nobr><a class="MenuItem" href="examples.html">Examples</a></nobr></td></tr>
+<tr><td><nobr><a class="MenuItem" href="protocol-index.html">ODBTP Protocol</a></nobr></td></tr>
+<tr><td><span class="MenuTitle">&nbsp;</span></td></tr>
+<tr><td><span class="MenuTitle">DEVELOPMENT</span></td></tr>
+<tr><td><nobr><a class="MenuItem" href="http://sourceforge.net/projects/odbtp">SF Project Page</a></nobr></td></tr>
+<tr><td><nobr><a class="MenuItem" href="http://sourceforge.net/forum/?group_id=70325">Forums</a></nobr></td></tr>
+<tr><td><nobr><a class="MenuItem" href="http://sourceforge.net/tracker/?group_id=70325&atid=527367">Bugs</a></nobr></td></tr>
+<tr><td><nobr><a class="MenuItem" href="http://sourceforge.net/cvs/?group_id=70325">CVS</a></nobr></td></tr>
+<tr><td><span class="MenuTitle">&nbsp;</span></td></tr>
+<tr><td><span class="MenuTitle">HOSTED BY</span></td></tr>
+<tr><td><a href="http://sourceforge.net"><img src="http://sourceforge.net/sflogo.php?group_id=70325&type=2" width="125" height="37" border="0" alt="SourceForge.net Logo"></a></td></tr>
+</table>
+</td>
+<td><nobr>&nbsp;&nbsp;&nbsp;&nbsp;</nobr></td>
+<td valign="top">
+<span class="PageTitle">ODBTP -- FAQ</span>
+<p>
+<ol>
+<li><a href="#faq01">What is ODBTP?</a></li>
+<li><a href="#faq02">How does it work?</a></li>
+<li><a href="#faq03">Why is ODBTP a binary protocol instead of a text protocol?</a></li>
+<li><a href="#faq04">Why does ODBTP require a Win32 service?</a></li>
+<li><a href="#faq05">Does the use of a service make it slow?</a></li>
+<li><a href="#faq06">Is ODBTP an ODBC-ODBC bridge?</a></li>
+<li><a href="#faq07">Does ODBTP have limited database support?</a></li>
+<li><a href="#faq08">Can ODBTP support databases that have UNICODE data types?</a></li>
+<li><a href="#faq09">Why is ODBTP ideal for use with MS SQL Server, MS Access and Visual FoxPro?</a></li>
+<li><a href="#faq10">Can ODBTP be used to access non-Win32 databases?</a></li>
+<li><a href="#faq11">Which programming languages are supported?</a></li>
+<li><a href="#faq12">Can the C client library be installed on ALL platforms?</a></li>
+</ol>
+<br>
+<ol>
+
+<li><a name="faq01"><b>What is ODBTP?</a></b><br>
+ODBTP is a TCP/IP protocol for connecting to Win32-based databases from
+any platform.
+<br>&nbsp;</li>
+
+<li><a name="faq02"><b>How does it work?</a></b><br>
+An ODBTP client remotely accesses a database by first establishing a TCP/IP
+connection with an ODBTP server installed on a Windows NT, XP Pro or 2000
+host. After successfully connecting to the server, the client instructs the
+server to access the database.  This is accomplished by the server with
+the database's locally installed ODBC driver. All subsequent database
+transactions are continually brokered by the server over the ODBTP
+connection.
+<br>&nbsp;</li>
+
+<li><a name="faq03"><b>Why is ODBTP a binary protocol instead of a text protocol?</a></b><br>
+In order to achieve the highest possible performance, a binary protocol was
+chosen. Text protocols require significantly more overhead and processing
+than binary protocols. When performing large or frequent database
+transactions, the additional overhead of a text protocol will
+degrade overall performance.
+<br>&nbsp;</li>
+
+<li><a name="faq04"><b>Why does ODBTP require a Win32 service?</a></b><br>
+ODBTP is designed to provide remote access to Win32 ODBC drivers.
+In general, Win32 ODBC drivers have a higher level of availability and
+quality than non-Win32 ODBC drivers.  Non-Win32 clients cannot access Win32
+ODBC drivers without the use of a server residing on the same machine
+where the drivers are installed.
+<br>&nbsp;</li>
+
+<li><a name="faq05"><b>Does the use of a service make it slow?</a></b><br>
+Despite the involvement of a mediating server, ODBTP is very
+fast.  This is primarily due to the fact that ODBTP is a very efficient binary
+protocol.
+<br>&nbsp;</li>
+
+<li><a name="faq06"><b>Is ODBTP an ODBC-ODBC bridge?</a></b><br>
+Although ODBC is used on the server-side, ODBTP does not use ODBC on the
+client-side.  Therefore, it is not an ODBC-ODBC bridge.
+While this decision greatly limits the usability of ODBTP, it
+makes it easier to use by some developers.  Unlike the ODBC C client
+library, the ODBTP C client library is developer friendly. The library
+was designed to make it very easy to develop C applications, and modules for
+scripting languages like PHP.  However, it is possible for someone to create
+an ODBC driver with the ODBTP client library.
+<br>&nbsp;</li>
+<li><a name="faq07"><b>Does ODBTP have limited database support?</a></b><br>
+ODBTP was constructed to provide full access to all of a database's features
+with ODBC. In general, it is only subject to the limitations of ODBC and / or
+the database's ODBC driver.
+<br>&nbsp;</li>
+
+<li><a name="faq08"><b>Can ODBTP support databases that have UNICODE data types?</a></b><br>
+Full support for UNICODE text queries and data is available in ODBTP.  It
+allows clients to optionally process queries with the UNICODE versions of
+the ODBC API functions. All UNICODE text is exchanged between the ODBTP
+client and server using UTF-8 encoding.
+<br>&nbsp;</li>
+
+<li><a name="faq09"><b>Why is ODBTP ideal for use with MS SQL Server, MS Access and Visual FoxPro?</a></b><br>
+ODBTP is ideal for accessing Microsoft database products, because it takes
+full advantage of Microsoft's ODBC drivers for its products. All of the
+new MS SQL Server 2000 and MS Access 2000 data types are supported.
+MS SQL Server stored procedures and MS Access stored queries
+are also completely supported by ODBTP.  In addition, the ODBTP client
+library makes it very easy to send and receive stored procedure
+parameter data.
+<br>&nbsp;</li>
+
+<li><a name="faq10"><b>Can ODBTP be used to access non-Win32 databases?</a></b><br>
+ODBTP clients can connect to any database that has a Win32 ODBC driver
+installed on the machine where the ODBTP server resides. Thus, it is
+possible for ODBTP to connect to databases like MySQL, PostgreSQL,
+Oracle and Sybase.
+<br>&nbsp;</li>
+
+<li><a name="faq11"><b>Which programming languages are supported?</a></b><br>
+The only programming langauges currently supported are C and PHP.
+<br>&nbsp;</li>
+
+<li><a name="faq12"><b>Can the C client library be installed on ALL platforms?</a></b><br>
+The ODBTP C client library is known to have been successfully compiled and
+used on Windows, Linux, Solaris, MacOS X, Novell NetWare and VAX operating
+systems. The only potential issues are the target OS's ability to support
+Berkeley socket functions, and 64-bit integers.
+<br>&nbsp;</li>
+
+</ol>
+<br>&nbsp;
+<br>&nbsp;
+<br>&nbsp;
+<br>&nbsp;
+<br>&nbsp;
+<br>&nbsp;
+<br>&nbsp;
+<br>&nbsp;
+<br>&nbsp;
+<br>&nbsp;
+<br>&nbsp;
+<br>&nbsp;
+<br>&nbsp;
+<br>&nbsp;
+<br>&nbsp;
+<br>&nbsp;
+<br>&nbsp;
+<br>&nbsp;
+<br>&nbsp;
+<br>&nbsp;
+</td>
+</tr>
+</table>
+</body>
+</html>

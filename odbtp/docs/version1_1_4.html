@@ -1,0 +1,79 @@
+<html>
+<head>
+<title>ODBTP Version 1.1.4</title>
+<link href="main.css" rel="stylesheet" type="text/css">
+</head>
+<body>
+<table cellspacing="0" cellpadding="0" border="0">
+<tr>
+<td valign="top">
+<table cellspacing="3" cellpadding="0" border="0">
+<tr><td><nobr><a class="MenuItem" href="index.html">Home Page</a></nobr></td></tr>
+<tr><td><nobr><a class="MenuItem" href="features.html">Features</a></nobr></td></tr>
+<tr><td><nobr><a class="MenuItem" href="http://sourceforge.net/project/showfiles.php?group_id=70325">Download</a></nobr></td></tr>
+<tr><td><span class="MenuTitle">&nbsp;</span></td></tr>
+<tr><td><span class="MenuTitle">DOCUMENTATION</span></td></tr>
+<tr><td><nobr><a class="MenuItem" href="install.html">Installation</a></nobr></td></tr>
+<tr><td><nobr><a class="MenuItem" href="servconf.html">Server Configuration</a></nobr></td></tr>
+<tr><td><nobr><a class="MenuItem" href="clilib-index.html">Client Library</a></nobr></td></tr>
+<tr><td><nobr><a class="MenuItem" href="phpext-index.html">PHP Extension</a></nobr></td></tr>
+<tr><td><nobr><a class="MenuItem" href="examples.html">Examples</a></nobr></td></tr>
+<tr><td><nobr><a class="MenuItem" href="protocol-index.html">ODBTP Protocol</a></nobr></td></tr>
+<tr><td><span class="MenuTitle">&nbsp;</span></td></tr>
+<tr><td><span class="MenuTitle">DEVELOPMENT</span></td></tr>
+<tr><td><nobr><a class="MenuItem" href="http://sourceforge.net/projects/odbtp">SF Project Page</a></nobr></td></tr>
+<tr><td><nobr><a class="MenuItem" href="http://sourceforge.net/forum/?group_id=70325">Forums</a></nobr></td></tr>
+<tr><td><nobr><a class="MenuItem" href="http://sourceforge.net/tracker/?group_id=70325&atid=527367">Bugs</a></nobr></td></tr>
+<tr><td><nobr><a class="MenuItem" href="http://sourceforge.net/cvs/?group_id=70325">CVS</a></nobr></td></tr>
+<tr><td><span class="MenuTitle">&nbsp;</span></td></tr>
+<tr><td><span class="MenuTitle">HOSTED BY</span></td></tr>
+<tr><td><a href="http://sourceforge.net"><img src="http://sourceforge.net/sflogo.php?group_id=70325&type=2" width="125" height="37" border="0" alt="SourceForge.net Logo"></a></td></tr>
+</table>
+</td>
+<td><nobr>&nbsp;&nbsp;&nbsp;&nbsp;</nobr></td>
+<td valign="top">
+<span class="PageTitle">ODBTP -- Version 1.1.4 Changes</span>
+<p>
+<dl>
+<dt><b>Fixed Bugs</b>
+<dd>
+Fixed the problem caused by the improper processing of results generated
+by PRINT statements within MS SQL Server stored procedures.
+<br>&nbsp;<br>
+</dd>
+<dt><b>Date / Time data enhancements</b>
+<dd>
+Added support for Visual Foxpro's native date / time data type.
+<p>
+Auto conversion of ISO date / time strings to ODBC's native date / time
+data type added to PHP extension. This allows an ISO date / time string to
+be used instead of a datetime object or C time value for datetime input
+parameters.
+<br>&nbsp;<br>
+</dd>
+<dt><b>Server-side removal of trailing spaces</b>
+<dd>
+Added support for the optional removal of trailing spaces by the
+ODBTP server during the retrieval of character field data.  This feature
+can be enabled or disabled with the new ODB_ATTR_RIGHTTRIMTEXT attribute.
+<br>&nbsp;<br>
+</dd>
+<dt><b>New PHP extension function</b>
+<dd>
+Added <code>odbtp_is_detached</code> function to PHP extension. This
+function can be used to determine whether or not a query resource is
+detached from the connection.
+<br>&nbsp;<br>
+</dd>
+<dt><b>New ODBC driver specification for mysql interface</b>
+<dd>
+Changed the ODBC driver specification for the mysql interface type. The
+new specification is for the MySQL ODBC 3.51 Driver.
+<br>&nbsp;<br>
+</dd>
+</dl>
+</td>
+</tr>
+</table>
+</body>
+</html>

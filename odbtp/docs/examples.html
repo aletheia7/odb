@@ -1,0 +1,109 @@
+<html>
+<head>
+<title>ODBTP Examples</title>
+<meta name="keywords" content="ODBTP, ODBC Drivers, Microsoft SQL Server, Microsoft Access, Oracle, Sybase, Database, PHP, UNIX, Linux">
+<meta name="Description" content="Provides remote access to ODBC without requiring local ODBC facilities.">
+<link href="main.css" rel="stylesheet" type="text/css">
+</head>
+<body>
+<table cellspacing="0" cellpadding="0" border="0">
+<tr>
+<td valign="top">
+<table cellspacing="3" cellpadding="0" border="0">
+<tr><td><nobr><a class="MenuItem" href="index.html">Home Page</a></nobr></td></tr>
+<tr><td><nobr><a class="MenuItem" href="features.html">Features</a></nobr></td></tr>
+<tr><td><nobr><a class="MenuItem" href="http://sourceforge.net/project/showfiles.php?group_id=70325">Download</a></nobr></td></tr>
+<tr><td><span class="MenuTitle">&nbsp;</span></td></tr>
+<tr><td><span class="MenuTitle">DOCUMENTATION</span></td></tr>
+<tr><td><nobr><a class="MenuItem" href="install.html">Installation</a></nobr></td></tr>
+<tr><td><nobr><a class="MenuItem" href="servconf.html">Server Configuration</a></nobr></td></tr>
+<tr><td><nobr><a class="MenuItem" href="clilib-index.html">Client Library</a></nobr></td></tr>
+<tr><td><nobr><a class="MenuItem" href="phpext-index.html">PHP Extension</a></nobr></td></tr>
+<tr><td><nobr><a class="MenuItem" href="examples.html">Examples</a></nobr></td></tr>
+<tr><td><nobr><a class="MenuItem" href="protocol-index.html">ODBTP Protocol</a></nobr></td></tr>
+<tr><td><span class="MenuTitle">&nbsp;</span></td></tr>
+<tr><td><span class="MenuTitle">DEVELOPMENT</span></td></tr>
+<tr><td><nobr><a class="MenuItem" href="http://sourceforge.net/projects/odbtp">SF Project Page</a></nobr></td></tr>
+<tr><td><nobr><a class="MenuItem" href="http://sourceforge.net/forum/?group_id=70325">Forums</a></nobr></td></tr>
+<tr><td><nobr><a class="MenuItem" href="http://sourceforge.net/tracker/?group_id=70325&atid=527367">Bugs</a></nobr></td></tr>
+<tr><td><nobr><a class="MenuItem" href="http://sourceforge.net/cvs/?group_id=70325">CVS</a></nobr></td></tr>
+<tr><td><span class="MenuTitle">&nbsp;</span></td></tr>
+<tr><td><span class="MenuTitle">HOSTED BY</span></td></tr>
+<tr><td><a href="http://sourceforge.net"><img src="http://sourceforge.net/sflogo.php?group_id=70325&type=2" width="125" height="37" border="0" alt="SourceForge.net Logo"></a></td></tr>
+</table>
+</td>
+<td><nobr>&nbsp;&nbsp;&nbsp;&nbsp;</nobr></td>
+<td valign="top">
+<span class="PageTitle">ODBTP -- Examples</span>
+<p>
+<table cellspacing="0" cellpadding="0" border="0">
+<tr>
+<td valign="top"><nobr><a href="odbtpcli_c.html">odbtpcli.c</a>&nbsp;&nbsp;</nobr></td>
+<td>General purpose ODBTP C client program.  Demonstrates how to execute a query and fetch rows.</td>
+</tr>
+<tr><td colspan="2">&nbsp;</td></tr>
+<tr>
+<td valign="top"><nobr><a href="initints_c.html">initints.c</a>&nbsp;&nbsp;</nobr></td>
+<td>A C program that initializes a table with 8-bit, 16-bit, 32-bit and 64-bit integer data.  Demonstrates how to prepare and execute a query containing parameters.</td>
+</tr>
+<tr><td colspan="2">&nbsp;</td></tr>
+<tr>
+<td valign="top"><nobr><a href="twotimes_c.html">twotimes.c</a>&nbsp;&nbsp;</nobr></td>
+<td>A C program that uses a stored procedure to multiple 32-bit and 64-bit values by two.  Demonstrates how to prepare and execute a stored procedure.</td>
+</tr>
+<tr><td colspan="2">&nbsp;</td></tr>
+<tr>
+<td valign="top"><nobr><a href="query_php.html">query.php</a>&nbsp;&nbsp;</nobr></td>
+<td>General purpose ODBTP PHP client script.  Demonstrates how to execute a query and fetch rows.</td>
+</tr>
+<tr><td colspan="2">&nbsp;</td></tr>
+<tr>
+<td valign="top"><nobr><a href="sp_who_php.html">sp_who.php</a>&nbsp;&nbsp;</nobr></td>
+<td>This is a PHP script that executes sp_who, a MS SQL Server system stored procedure.  Demonstrates how to retrieve data from a query using attached fields.</td>
+</tr>
+<tr><td colspan="2">&nbsp;</td></tr>
+<tr>
+<td valign="top"><nobr><a href="addemp_php.html">addemp.php</a>&nbsp;&nbsp;</nobr></td>
+<td>A PHP script that adds employee information into a database. Demonstrates how to perform transactions, process UNICODE data, send input data to a stored procedure, and retrieve output data from a stored procedure.</td>
+</tr>
+<tr><td colspan="2">&nbsp;</td></tr>
+<tr>
+<td valign="top"><nobr><a href="insertints_php.html">insertints.php</a>&nbsp;&nbsp;</nobr></td>
+<td>A PHP script that inserts integer data into a table. Demonstrates how to prepare and execute a stored procedure using attached parameters.</td>
+</tr>
+<tr><td colspan="2">&nbsp;</td></tr>
+<tr>
+<td valign="top"><nobr><a href="storedqry_php.html">storedqry.php</a>&nbsp;&nbsp;</nobr></td>
+<td>This is a PHP script that demonstrates how to execute a MS Access stored query.</td>
+</tr>
+<tr><td colspan="2">&nbsp;</td></tr>
+<tr>
+<td valign="top"><nobr><a href="scroller_php.html">scroller.php</a>&nbsp;&nbsp;</nobr></td>
+<td>A PHP script that provides an interface to scroll up, down, relatively and absolutely through a result set. Demonstrates how to use cursors and reserved connections.</td>
+</tr>
+<tr><td colspan="2">&nbsp;</td></tr>
+<tr>
+<td valign="top"><nobr><a href="sqltables_php.html">sqltables.php</a>&nbsp;&nbsp;</nobr></td>
+<td>A PHP script that shows how to call the ODBC API catalog functions as queries.  It also shows how to process nested queries on the same connection.</td>
+</tr>
+<tr><td colspan="2">&nbsp;</td></tr>
+<tr>
+<td valign="top"><nobr><a href="pearqry_php.html">pearqry.php</a>&nbsp;&nbsp;</nobr></td>
+<td>This is a PHP script that demonstrates how to execute queries using the odbtp PEAR DB driver.</td>
+</tr>
+<tr><td colspan="2">&nbsp;</td></tr>
+<tr>
+<td valign="top"><nobr><a href="timetable.html">timetable</a>&nbsp;&nbsp;</nobr></td>
+<td>A set of PHP scripts used to insert and display datetime data. Demonstrates how to use a reserved connection to maintain a database connection across mulitple web pages. It also shows how to process datetime data.</td>
+</tr>
+<tr><td colspan="2">&nbsp;</td></tr>
+<tr>
+<td valign="top"><nobr><a href="http://www.ushmm.org/wlc/en/">Holocaust LC</a>&nbsp;&nbsp;</nobr></td>
+<td>The Holocaust Learning Center is an example of an actual website that uses ODBTP.  All of this site's pages, except the home page, are dynamically generated from data stored in a MS-SQL 7.0 database. The web server used for this site is Apache running on a Solaris server. The Holocaust LC operates in a 3-tier environment, in which the site's Solaris-based PHP scripts connect to a MS-SQL 7.0 server running on a Windows NT 4.0 server via an ODBTP server running on a Windows 2000 server.</td>
+</tr>
+</table>
+</td>
+</tr>
+</table>
+</body>
+</html>

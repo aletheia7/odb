@@ -1,0 +1,89 @@
+<html>
+<head>
+<title>insertints.php</title>
+</head>
+<body>
+<h3>insertints.php</h3>
+<pre>&lt;html&gt;
+&lt;head&gt;
+&lt;title&gt;Insert The Ints&lt;/title&gt;
+&lt;/head&gt;
+&lt;body&gt;
+&lt;?php
+/*
+    The following SQL was used to create the table and stored procedures
+    used by this example script.
+
+    CREATE TABLE dbo.TheInts (
+        Id int IDENTITY (1, 1) NOT NULL ,
+        TheTinyInt tinyint NOT NULL ,
+        TheSmallInt smallint NOT NULL ,
+        TheInt int NOT NULL ,
+        TheBigInt bigint NOT NULL ,
+        CONSTRAINT PKCL_TheInts_Id PRIMARY KEY  CLUSTERED (
+            Id
+        )
+    )
+    GO
+
+    CREATE PROCEDURE AddTheInts
+        @TheTinyInt tinyint,
+        @TheSmallInt smallint,
+        @TheInt int,
+        @TheBigInt bigint
+    AS
+        SET NOCOUNT ON
+
+        INSERT INTO TheInts( TheTinyInt, TheSmallInt, TheInt, TheBigInt )
+                     VALUES( @TheTinyInt, @TheSmallInt, @TheInt, @TheBigInt )
+
+        IF @@ERROR &lt;&gt; 0 RETURN 0
+        RETURN @@IDENTITY
+    GO
+
+    CREATE PROCEDURE GetTheIntsString
+        @Id int,
+        @TheIntsString varchar(256) = NULL OUTPUT
+    AS
+        SET NOCOUNT ON
+
+        SET @TheIntsString =
+         (SELECT 'Tiny Int = ' + CONVERT(varchar(32),TheTinyInt) + '  ' +
+                 'Small Int = ' + CONVERT(varchar(32),TheSmallInt) + '  ' +
+                 'Int = ' + CONVERT(varchar(32),TheInt) + '  ' +
+                 'Big Int = ' + CONVERT(varchar(32),TheBigInt)
+          FROM TheInts WHERE Id = @Id)
+    GO
+
+*/
+
+    $con = odbtp_connect( 'odbtp.somewhere.com',
+                          'DRIVER={SQL Server};SERVER=myserver;UID=myuid;PWD=mypwd;DATABASE=mydb;' ) or die;
+
+    // Execute a stored procedure using attached parameters
+    $qry = odbtp_prepare_proc( "AddTheInts" ) or die;
+    odbtp_attach_param( $qry, "@RETURN_VALUE", $Id ) or die;
+    odbtp_attach_param( $qry, "@TheTinyInt", $TheTinyInt ) or die;
+    odbtp_attach_param( $qry, "@TheSmallInt", $TheSmallInt ) or die;
+    odbtp_attach_param( $qry, "@TheInt", $TheInt ) or die;
+    odbtp_attach_param( $qry, "@TheBigInt", $TheBigInt ) or die;
+
+    $TheTinyInt = $_REQUEST['TheTinyInt'];
+    $TheSmallInt = $_REQUEST['TheSmallInt'];
+    $TheInt = $_REQUEST['TheInt'];
+    $TheBigInt = $_REQUEST['TheBigInt'];
+    odbtp_execute( $qry ) or die;
+    echo "Id: $Id&lt;p&gt;";
+
+    // Execute a stored procedure without using attached parameters
+    $qry = odbtp_prepare_proc( "GetTheIntsString" ) or die;
+    odbtp_set( $qry, "@Id", $Id ) or die;
+    odbtp_execute( $qry ) or die;
+    echo "Inserted: " . odbtp_get( $qry, "@TheIntsString" );
+
+    odbtp_close();
+?&gt;
+&lt;/body&gt;
+&lt;/html&gt;</pre>
+</body>
+</html>

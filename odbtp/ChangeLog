@@ -1,0 +1,77 @@
+08-Jan-2006
+Release 1.1.4
+
+    * Added optional server-side removal of trailing spaces during
+      the retrieval of character field data.
+    * Changed ODBC driver for the mysql interface type to
+      "MySQL ODBC 3.51 Driver."
+    * Added support for FoxPro's SQL Date/Time data type.
+    * Added conversion of ISO date/time string to datetime for PHP
+      extension.
+    * Fixed problem caused by PRINT statements within MS SQL Server
+      stored procedures.
+    * Added odbtp_is_detached function to PHP extension.
+
+12-Mar-2005
+Release 1.1.3
+
+    * Added support for building shared library versions of the C client
+      library for UNIX (libodbtp.so) and Win32 (odbtp.dll).
+    * Added native support for GUID (uniqueidentifier) fields.
+    * Fixed the PHP extension's mssql_bind() alias definition. The third
+      argument is now forced to be passed by reference.
+    * Fixed bug in service that was causing a numveric overflow error
+      when smalldatetime fields are converted to character format.
+    * Fixed the C client library functions that would cause PHP client
+      applications to crash when retrieving the name of a prepared
+      parameter that was not bounded.
+
+16-Aug-2004
+Release 1.1.2
+
+    * Fixed the problem that was causing the server to terminate if
+      output parameter data from a prepared procedure is not read
+      before closing the connection.
+    * Added prepared procedure parameter cache to Win32 service.
+    * Added client library functions that can be used for datetime to
+      ISO formatted string conversion.
+    * Added provisions for compiling client library on 64-bit systems,
+      such as Tru64 UNIX.
+    * Renamed the PHP extension source file from odbtp.c to php_odbtp.c.
+    * NetWare PHP extension was added.
+
+02-Jun-2004
+Release 1.1.1
+
+    * Fixed bugs that could cause the server to crash when retrieving
+      or sending data whose size exceeded the size of the buffer bound
+      to a field or parameter.
+    * Fixed some minor and unreported bugs.
+    * Added data truncation detection.
+    * Added functions to to C client library to retrieve more details
+      about socket errors.
+    * New interface types for FoxPro DBC and Excel files were added.
+    * Auto-restart feature added to ODBTP service.
+    * Modified PHP extension and build files to work with PHP version 5.
+    * Modified PHP PEAR DB driver to work with latest version of DB.
+
+29-Jan-2004
+Release 1.1
+
+    * Interface file support was added to facilitate database connections
+      without the use of an ODBC driver connect string.
+    * Client-side row cache support was added to store result set data.
+      This allows row scrolling to be performed without the use of
+      a cursor. It also enhances overall performance.
+    * Multi-process support was added to the server for servicing clients
+      that use ODBC drivers that are not thread safe.
+    * Optional use of the UNICODE versions of the ODBC API functions by
+      the server was added.  This enables the execution of UNICODE encoded
+      query text.
+    * Many enhancements were made to the server that provide better and
+      extended access to ODBC.
+    * PHP support was considerably enhanced by the addition of many new
+      functions to the odbtp extension.
+    * Added optional support for all of the PHP mssql extension's
+      functions in the odbtp extension.
+    * A PHP PEAR DB driver was added to the package.
