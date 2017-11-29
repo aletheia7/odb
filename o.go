@@ -6,8 +6,8 @@
 package odb
 
 /*
-#cgo CFLAGS:  -I${SRCDIR}/odbtp
-#cgo LDFLAGS: -L${SRCDIR}/odbtp/.libs -lm -lc -lodbtp
+#cgo CFLAGS:  -I${SRCDIR}/vendor/odbtp
+#cgo LDFLAGS: -L${SRCDIR}/vendor/odbtp/.libs -lm -lc -lodbtp
 #include <stdlib.h>
 #include "odbtp.h"
 
