@@ -1,8 +1,6 @@
 // Copyright 2016 aletheia7. All rights reserved. Use of this source code is
 // governed by a BSD-2-Clause license that can be found in the LICENSE file.
 
-// +build linux,cgo
-
 package odb
 
 /*
@@ -10,149 +8,229 @@ package odb
 #cgo LDFLAGS: -L${SRCDIR}/vendor/odbtp/.libs -lm -lc -lodbtp
 #include <stdlib.h>
 #include "odbtp.h"
-
-int get_size() {
-	return sizeof(odbLONG);
-}
 */
 import "C"
 import (
+	"bytes"
+	"context"
+	"database/sql"
+	"database/sql/driver"
 	"errors"
 	"fmt"
+	"io"
 	"net"
 	"sort"
 	"strconv"
 	"strings"
-	"sync"
+	"sync/atomic"
+	"text/template"
+	"text/template/parse"
 	"time"
 	"unsafe"
 )
 
-var lock sync.Mutex
-
-type Driver string
+type Driver_odbc string
 
 const (
-	Default_port        = 2799
-	Msaccess     Driver = `DRIVER=Microsoft Access Driver (*.mdb)`
-	Foxpro              = `DRIVER={Microsoft Visual FoxPro Driver}`
+	Default_port                  = 2799
+	Msaccess          Driver_odbc = `DRIVER=Microsoft Access Driver (*.mdb)`
+	Foxpro                        = `DRIVER={Microsoft Visual FoxPro Driver}`
+	Sql_get_type_info             = "||SQLGetTypeInfo"
 )
 
-// Set_truncate_seconds will call time.Time.Truncate(time.Seconds) for
-// Query.Set_param_time(). msaccess does not return results with seconds
-//
-func Truncate_seconds(enable bool) option {
-	return func(o *Con) (option, error) {
-		prev := o.truncate_seconds
-		return Truncate_seconds(prev), nil
-	}
-}
-
-type login C.odbUSHORT
+type Login C.odbUSHORT
 
 const (
-	Normal   login = C.ODB_LOGIN_NORMAL
+	Normal   Login = C.ODB_LOGIN_NORMAL
 	Reserved       = C.ODB_LOGIN_RESERVED
 	Single         = C.ODB_LOGIN_SINGLE
 )
 
-type Data int
+type Data int16
 
-func (o *Data) String() string {
-	if s, ok := dt[*o]; ok {
+func (o Data) String() string {
+	s, ok := data2s[o]
+	if ok {
 		return s
 	}
-	return strconv.Itoa(int(*o))
+	return fmt.Sprintf("invalid ODB data type: %v", o)
+}
+
+var data2s = map[Data]string{
+	Binary:   "Binary",
+	Wchar:    "Wchar",
+	Smallint: "Smallint",
+	Int:      "Int",
+	Bigint:   "Bigint",
+	Bit:      "Bit",
+	Char:     "Char",
+	Double:   "Double",
+	Datetime: "Datetime",
+	// Guid:      "Guid",
+	// Usmallint: "Usmallint",
+	// Uint:      "Uint",
+	// Bigint:    "Bigint",
+	// Tinyint:   "Timyint",
+	// Ubigint:   "Ubigint",
+	// Utinyint:  "Utinyint",
+	// Numeric:   "Numeric",
+	// Real:      "Real",
+	// Date:      "Date",
+	// Time:      "Time",
+}
+
+func (o *Data) short() C.odbSHORT {
+	return C.odbSHORT(*o)
 }
 
 const (
-	Char                 = Data(C.ODB_CHAR)
-	Null                 = Data(C.ODB_NULL)
-	Datetime             = Data(C.ODB_DATETIME)
-	Int                  = Data(C.ODB_INT)
-	Double               = Data(C.ODB_DOUBLE)
-	Bit                  = Data(C.ODB_BIT)
-	Smallint             = Data(C.ODB_SMALLINT)
-	Binary               = Data(C.ODB_BINARY)
-	Binary_msaccess_memo = Data(-100)
+	Binary   Data = C.ODB_BINARY   // (-2)
+	Wchar         = C.ODB_WCHAR    // (-8) Use for unicode
+	Smallint      = C.ODB_SMALLINT // (-15)
+	Int           = C.ODB_INT      // (-16)
+	Bigint        = C.ODB_BIGINT   // (-25)
+	Bit           = C.ODB_BIT      // (-7)
+	Char          = C.ODB_CHAR     // 1
+	Double        = C.ODB_DOUBLE   // 8 same as C.ODB_FLOAT
+	Datetime      = C.ODB_DATETIME // 93
+	// Guid           = C.ODB_GUID      // (-11)
+	// Usmallint      = C.ODB_USMALLINT // (-17)
+	// Uint           = C.ODB_UINT      // (-18)
+	// Tinyint        = C.ODB_TINYINT   // (-26)
+	// Ubigint        = C.ODB_UBIGINT   // (-27)
+	// Utinyint       = C.ODB_UTINYINT  // (-28)
+	// Numeric        = C.ODB_NUMERIC   // 2
+	// Real           = C.ODB_REAL      // 7
+	// Date           = C.ODB_DATE      // 91
+	// Time           = C.ODB_TIME      // 92
 )
 
-var odb2sql = map[Driver]map[Data]string{
+type Sql_type int16
+
+func (o Sql_type) String() string {
+	s, ok := sql_type2s[o]
+	if ok {
+		return s
+	}
+	return fmt.Sprintf("invalid SQL data type: %v", o)
+}
+
+// duplicates are commented-out
+var sql_type2s = map[Sql_type]string{
+	Sql_bit:      "SQL_BIT ",
+	Sql_tinyint:  "SQL_TINYINT",
+	Sql_smallint: "SQL_SMALLINT",
+	// Sql_integer:        "SQL_INTEGER",
+	Sql_int:       "SQL_INT",
+	Sql_bitint:    "SQL_BIGINT",
+	Sql_numeric:   "SQL_NUMERIC",
+	Sql_real:      "SQL_REAL",
+	Sql_float:     "SQL_FLOAT",
+	Sql_double:    "SQL_DOUBLE",
+	Sql_decimal:   "SQL_DECIMAL",
+	Sql_date:      "SQL_DATE",
+	Sql_time:      "SQL_TIME",
+	Sql_timestamp: "SQL_TIMESTAMP",
+	Sql_type_date: "SQL_TYPE_DATE",
+	Sql_type_time: "SQL_TYPE_TIME",
+	// Sql_type_timestamp: "SQL_TYPE_TIMESTAMP",
+	Sql_datetime: "SQL_DATETIME",
+	Sql_char:     "SQL_CHAR",
+	Sql_varchar:  "SQL_VARCHAR",
+	// Sql_longvarchar:   "SQL_LONGVARCHAR",
+	Sql_text:  "SQL_TEXT",
+	Sql_wchar: "SQL_WCHAR",
+	// Sql_nchar:         "SQL_NCHAR",
+	Sql_wvarchar: "SQL_WVARCHAR",
+	// Sql_nvarchar:      "SQL_NVARCHAR",
+	// Sql_wlongvarchar: "SQL_WLONGVARCHAR",
+	Sql_ntext:         "SQL_NTEXT",
+	Sql_binary:        "SQL_BINARY",
+	Sql_varbinary:     "SQL_VARBINARY",
+	Sql_longvarbinary: "SQL_LONGVARBINARY",
+	// Sql_image:         "SQL_IMAGE",
+	Sql_guid:    "SQL_GUID",
+	Sql_variant: "SQL_VARIANT",
+}
+
+const (
+	Sql_bit            Sql_type = C.SQL_BIT            // (-7)
+	Sql_tinyint                 = C.SQL_TINYINT        // (-6)
+	Sql_smallint                = C.SQL_SMALLINT       // 5
+	Sql_integer                 = C.SQL_INTEGER        // 4
+	Sql_int                     = C.SQL_INT            // 4
+	Sql_bitint                  = C.SQL_BIGINT         // (-5)
+	Sql_numeric                 = C.SQL_NUMERIC        // 2
+	Sql_real                    = C.SQL_REAL           // 7
+	Sql_float                   = C.SQL_FLOAT          // 6
+	Sql_double                  = C.SQL_DOUBLE         // 8
+	Sql_decimal                 = C.SQL_DECIMAL        // 3
+	Sql_date                    = C.SQL_DATE           // 9
+	Sql_time                    = C.SQL_TIME           // 10
+	Sql_timestamp               = C.SQL_TIMESTAMP      // 11
+	Sql_type_date               = C.SQL_TYPE_DATE      // 91
+	Sql_type_time               = C.SQL_TYPE_TIME      // 92
+	Sql_type_timestamp          = C.SQL_TYPE_TIMESTAMP // 93
+	Sql_datetime                = C.SQL_DATETIME       // 93
+	Sql_char                    = C.SQL_CHAR           // 1
+	Sql_varchar                 = C.SQL_VARCHAR        // 12
+	Sql_longvarchar             = C.SQL_LONGVARCHAR    // (-1)
+	Sql_text                    = C.SQL_TEXT           // (-1)
+	Sql_wchar                   = C.SQL_WCHAR          // (-8)
+	Sql_nchar                   = C.SQL_NCHAR          // (-8)
+	Sql_wvarchar                = C.SQL_WVARCHAR       // (-9)
+	Sql_nvarchar                = C.SQL_NVARCHAR       // (-9)
+	Sql_wlongvarchar            = C.SQL_WLONGVARCHAR   // (-10)
+	Sql_ntext                   = C.SQL_NTEXT          // (-10)
+	Sql_binary                  = C.SQL_BINARY         // (-2)
+	Sql_varbinary               = C.SQL_VARBINARY      // (-3)
+	Sql_longvarbinary           = C.SQL_LONGVARBINARY  // (-4)
+	Sql_image                   = C.SQL_IMAGE          // (-4)
+	Sql_guid                    = C.SQL_GUID           // (-11)
+	Sql_variant                 = C.SQL_VARIANT        // (-150)
+)
+
+type desc struct {
+	sql_type   C.odbSHORT
+	col_size   C.odbULONG
+	dec_digits C.odbSHORT
+}
+
+var odb2sql = map[Driver_odbc]map[Data]desc{
 	Msaccess: {
-		Char:                 "char",
-		Datetime:             "datetime",
-		Int:                  "integer",
-		Double:               "double",
-		Bit:                  "bit",
-		Smallint:             "smallint",
-		Binary:               "Text",
-		Binary_msaccess_memo: "Text",
+		Binary:   desc{C.SQL_BINARY, 255, 0},
+		Wchar:    desc{C.SQL_NTEXT, 1073741823, 0}, // memo
+		Smallint: desc{C.SQL_SMALLINT, 5, 0},
+		Int:      desc{C.SQL_INT, 10, 0},
+		Bigint:   desc{C.SQL_DOUBLE, 53, 0},
+		// Bigint:   desc{C.SQL_BIGINT, 19, 0}, // missing
+		Bit:      desc{C.SQL_BIT, 1, 0},
+		Char:     desc{C.SQL_CHAR, 255, 0},
+		Double:   desc{C.SQL_DOUBLE, 53, 0},
+		Datetime: desc{C.SQL_DATETIME, 23, 3},
 	},
-	Foxpro: { // https://msdn.microsoft.com/en-us/library/z3y7feks(v=vs.80).aspx TYPE()
-		Char:                 "C",
-		Datetime:             "T",
-		Int:                  "N",
-		Double:               "N",
-		Bit:                  "L",
-		Smallint:             "N",
-		Binary:               "W",
-		Binary_msaccess_memo: "M",
-	},
+	// Foxpro: { // https://msdn.microsoft.com/en-us/library/z3y7feks(v=vs.80).aspx TYPE()
+	// 	Char:     "C",
+	// 	Datetime: "T",
+	// 	Int:      "N",
+	// 	Double:   "N",
+	// 	Bit:      "L",
+	// 	Smallint: "N",
+	// 	Binary:   "W",
+	// 	// Binary_msaccess_memo: "M",
+	// },
 }
 
-var dt = map[Data]string{
-	Char:                 "char",
-	Null:                 "null",
-	Datetime:             "datetime",
-	Int:                  "int",
-	Double:               "double",
-	Bit:                  "bit",
-	Smallint:             "smallint",
-	Binary:               "W",
-	Binary_msaccess_memo: "binary msaccess memo",
-}
-
-type Cursor int
-
-const (
-	Cursor_forward = Cursor(C.ODB_CURSOR_FORWARD)
-	Cursor_static  = Cursor(C.ODB_CURSOR_STATIC)
-	Cursor_keyset  = Cursor(C.ODB_CURSOR_KEYSET)
-	Cursor_dynamic = Cursor(C.ODB_CURSOR_DYNAMIC)
-)
-
-type Concur int
-
-const (
-	Concur_default  = Concur(C.ODB_CONCUR_DEFAULT)
-	Concur_readonly = Concur(C.ODB_CONCUR_READONLY)
-	Concur_lock     = Concur(C.ODB_CONCUR_LOCK)
-	Concur_rowver   = Concur(C.ODB_CONCUR_ROWVER)
-	Concur_values   = Concur(C.ODB_CONCUR_VALUES)
-)
-
-type Param int
-
-func (o Param) ushort() C.odbUSHORT {
-	return C.odbUSHORT(o)
-}
-
-const Input = Param(C.ODB_PARAM_INPUT)
-
-type Con struct {
-	driver           Driver
-	h                C.odbHANDLE
-	qrys             map[*Query]bool
-	convert_all      bool
-	row_cache_size   uint
-	truncate_seconds bool
+type Conn struct {
+	driver              Driver_odbc
+	h                   C.odbHANDLE
+	stmts               map[*Stmt]bool
+	prepare_is_template bool
 }
 
 // host example: locust | locust:2799
 //
-func New(host string, login login, dsn string, opt ...option) (*Con, error) {
-	lock.Lock()
-	defer lock.Unlock()
+func new_con(host string, login Login, dsn string) (*Conn, error) {
 	if !strings.Contains(host, ":") {
 		host += ":" + strconv.Itoa(Default_port)
 	}
@@ -160,8 +238,8 @@ func New(host string, login login, dsn string, opt ...option) (*Con, error) {
 	if err != nil {
 		return nil, err
 	}
-	r := &Con{
-		qrys: map[*Query]bool{},
+	r := &Conn{
+		stmts: map[*Stmt]bool{},
 	}
 	switch {
 	case strings.HasPrefix(dsn, string(Msaccess)):
@@ -179,119 +257,73 @@ func New(host string, login login, dsn string, opt ...option) (*Con, error) {
 	defer h.free()
 	p := new_s(dsn)
 	defer p.free()
-	if !b2b(C.odbLogin(r.h, h.p, C.odbUSHORT(tcp.Port), C.odbUSHORT(login), p.p)) {
+	if !dB2b(C.odbLogin(r.h, h.p, C.odbUSHORT(tcp.Port), C.odbUSHORT(login), p.p)) {
 		err = oe2err(r.h)
 		C.odbFree(r.h)
 		return nil, err
 	}
-	for _, o := range opt {
-		if _, err = o(r); err != nil {
-			r.Logout(true)
-			r.Free()
-			return nil, err
-		}
-	}
 	return r, err
 }
 
-type option func(o *Con) (option, error)
-
-func Load_data_types() option {
-	return func(o *Con) (option, error) {
-		if o.h != nil {
-			if !b2b(C.odbLoadDataTypes(o.h)) {
-				return nil, oe2err(o.h)
-			}
-		}
-		return Load_data_types(), nil
+func (o *Conn) Ping(ctx context.Context) (err error) {
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	default:
 	}
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		if dB2b(C.odbIsConnected(o.h)) {
+			return
+		}
+		err = driver.ErrBadConn
+	}()
+	select {
+	case <-ctx.Done():
+		return driver.ErrBadConn
+	case <-done:
+	}
+	return
 }
 
-func Unicode(enable bool) option {
-	return func(o *Con) (option, error) {
-		var long C.odbULONG
-		var err error
-		if !b2b(C.odbGetAttrLong(o.h, C.odbLONG(C.ODB_ATTR_UNICODESQL), &long)) {
-			return nil, oe2err(o.h)
-		}
-		var prev bool
-		if long == 1 {
-			prev = true
-		}
-		if enable {
-			long = 1
-		} else {
-			long = 0
-		}
-		if !b2b(C.odbSetAttrLong(o.h, C.odbLONG(C.ODB_ATTR_UNICODESQL), long)) {
-			return nil, oe2err(o.h)
-		}
-		return Unicode(prev), err
+func (o *Conn) row_cache(enable bool, size uint64) (err error) {
+	if !dB2b(C.odbUseRowCache(o.h, b2B(enable), C.odbULONG(size))) {
+		err = oe2err(o.h)
 	}
+	return
 }
 
-func Cache_procs(enable bool) option {
-	return func(o *Con) (option, error) {
-		var long C.odbULONG
-		var err error
-		if !b2b(C.odbGetAttrLong(o.h, C.odbLONG(C.ODB_ATTR_CACHEPROCS), &long)) {
-			return nil, oe2err(o.h)
-		}
-		var prev bool
-		if long == 1 {
-			prev = true
-		}
-		if enable {
-			long = 1
-		} else {
-			long = 0
-		}
-		if !b2b(C.odbSetAttrLong(o.h, C.odbLONG(C.ODB_ATTR_CACHEPROCS), long)) {
-			return nil, oe2err(o.h)
-		}
-		return Cache_procs(prev), err
+func (o *Conn) get_attr_bool(opt bool_option) (bool, error) {
+	var long C.odbULONG
+	if !dB2b(C.odbGetAttrLong(o.h, C.odbLONG(opt), &long)) {
+		return false, oe2err(o.h)
 	}
+	if long == 1 {
+		return true, nil
+	}
+	return false, nil
 }
 
-func Querytimeout(timeout uint) option {
-	return func(o *Con) (option, error) {
-		var prev C.odbULONG
-		if !b2b(C.odbGetAttrLong(o.h, C.odbLONG(C.ODB_ATTR_QUERYTIMEOUT), &prev)) {
-			return nil, oe2err(o.h)
-		}
-		if !b2b(C.odbSetAttrLong(o.h, C.odbLONG(C.ODB_ATTR_QUERYTIMEOUT), C.odbULONG(timeout))) {
-			return nil, oe2err(o.h)
-		}
-		return Querytimeout(uint(prev)), nil
+func (o *Conn) set_attr_bool(opt bool_option, enable bool) (err error) {
+	var long C.odbULONG
+	if enable {
+		long = 1
 	}
+	if !dB2b(C.odbSetAttrLong(o.h, C.odbLONG(opt), long)) {
+		err = oe2err(o.h)
+	}
+	return
 }
 
-func Row_cache(enable bool, size uint) option {
-	return func(o *Con) (option, error) {
-		prev := b2b(C.odbIsUsingRowCache(o.h))
-		prev_size := o.row_cache_size
-		o.row_cache_size = size
-		if !b2b(C.odbUseRowCache(o.h, b2B(enable), C.odbULONG(o.row_cache_size))) {
-			return nil, oe2err(o.h)
-		}
-		return Row_cache(prev, prev_size), nil
+func (o *Conn) set_attr_int(opt int_option, i uint64) (err error) {
+	if !dB2b(C.odbSetAttrLong(o.h, C.odbLONG(opt), C.odbULONG(i))) {
+		err = oe2err(o.h)
 	}
+	return
 }
 
-func Convert_all(enable bool) option {
-	return func(o *Con) (option, error) {
-		prev := o.convert_all
-		o.convert_all = enable
-		if !b2b(C.odbConvertAll(o.h, b2B(enable))) {
-			return nil, oe2err(o.h)
-		}
-		return Convert_all(prev), nil
-	}
-}
-
-func (o *Con) Logout(disconnect bool) {
-	lock.Lock()
-	defer lock.Unlock()
+func (o *Conn) logout(disconnect bool) {
 	if o.h != nil {
 		C.odbLogout(o.h, b2B(disconnect))
 		C.odbFree(o.h)
@@ -299,20 +331,26 @@ func (o *Con) Logout(disconnect bool) {
 	}
 }
 
-func (o *Con) Free() {
-	lock.Lock()
-	defer lock.Unlock()
+func (o *Conn) drop() (err error) {
+	for q := range o.stmts {
+		if !dB2b(C.odbDropQry(q.h)) {
+			return oe2err(q.h)
+		}
+	}
+	o.stmts = map[*Stmt]bool{}
+	return
+}
+
+func (o *Conn) free() {
 	if o.h != nil {
 		C.odbFree(o.h)
 		o.h = nil
 	}
-	o.qrys = map[*Query]bool{}
+	o.stmts = map[*Stmt]bool{}
 }
 
-func (o *Con) Allocate_query() *Query {
-	lock.Lock()
-	defer lock.Unlock()
-	r := &Query{
+func (o *Conn) allocate_query() *Stmt {
+	r := &Stmt{
 		con: o,
 		h:   C.odbAllocate(o.h),
 	}
@@ -320,428 +358,84 @@ func (o *Con) Allocate_query() *Query {
 		r = nil
 	}
 	if r != nil {
-		o.qrys[r] = true
+		o.stmts[r] = true
 	}
 	return r
 }
 
-func (o *Con) Prepare(sql string) (*Query, error) {
-	return o.prepare_all(sql, false)
-}
-
-// Do not use with Single
-//
-func (o *Con) Prepare_proc(sql string) (*Query, error) {
-	return o.prepare_all(sql, true)
-}
-
-func (o *Con) Version() string {
-	lock.Lock()
-	defer lock.Unlock()
-	p := C.odbGetVersion(o.h)
-	if p == nil {
-		return ``
-	} else {
-		return C.GoString((*C.char)(unsafe.Pointer(p)))
+func (o *Conn) prepare(sql string) (*Stmt, error) {
+	r := &Stmt{
+		con:   o,
+		h:     C.odbAllocate(o.h),
+		bindp: map[C.odbUSHORT]Data{},
 	}
-}
-
-type Query struct {
-	con *Con
-	h   C.odbHANDLE
-}
-
-// defaults: odb.Cursor_forward, Concur_default, false
-//
-func (o *Query) Set_cursor(cursor Cursor, concur Concur, enable_bookmarks bool) (err error) {
-	lock.Lock()
-	defer lock.Unlock()
-	if !b2b(C.odbSetCursor(o.h, C.odbUSHORT(cursor), C.odbUSHORT(concur), b2B(enable_bookmarks))) {
-		err = oe2err(o.h)
+	if r.h == nil {
+		return nil, fmt.Errorf("odbAllocate failed")
 	}
-	return
-}
-
-func (o *Query) Param_sql_type_name(param interface{}) string {
-	lock.Lock()
-	defer lock.Unlock()
-	return C.GoString((*C.char)(unsafe.Pointer(C.odbParamSqlTypeName(o.h, o.get_param(o, param)))))
-}
-
-func (o *Query) Input(param interface{}, dt Data, final bool) error {
-	lock.Lock()
-	defer lock.Unlock()
-	return o.input(param, dt, odb2sql[o.con.driver][dt], final)
-}
-
-type In struct {
-	Dt Data
-}
-
-type Inp struct {
-	Col interface{}
-	Dt  Data
-}
-
-// Inputs calls Input using an array of In.
-//
-func (o *Query) Inputs(in []In) error {
-	lock.Lock()
-	defer lock.Unlock()
-	final := false
-	var err error
-	for i, p := range in {
-		if i == len(in)-1 {
-			final = true
-		}
-		if err = o.input(i+1, p.Dt, odb2sql[o.con.driver][p.Dt], final); err != nil {
-			return fmt.Errorf("%v, %v, %v, %v", i+1, p.Dt, odb2sql[o.con.driver][p.Dt], err)
-		}
-	}
-	return nil
-}
-
-func (o *Query) Inputs_p(in []Inp) error {
-	lock.Lock()
-	defer lock.Unlock()
-	final := false
-	var err error
-	for i, p := range in {
-		if i == len(in)-1 {
-			final = true
-		}
-		if err = o.input(p.Col, p.Dt, odb2sql[o.con.driver][p.Dt], final); err != nil {
-			return fmt.Errorf("%v, %v, %v, %v", p.Col, p.Dt, odb2sql[o.con.driver][p.Dt], err)
-		}
-	}
-	return nil
-}
-
-type Set struct {
-	Data interface{} // can be nil for null
-}
-
-type Setp struct {
-	Col  interface{}
-	Data interface{}
-}
-
-// Set_param calls Set_param_<date type> receivers using an array of Set. Set
-// Set.Param to nil to use one based incrementing column number.
-//
-func (o *Query) Set_param(set []Set) error {
-	lock.Lock()
-	defer lock.Unlock()
-	final := false
-	var err error
-	var param int
-	for i, p := range set {
-		if i == len(set)-1 {
-			final = true
-		}
-		param = i + 1
-		switch t := p.Data.(type) {
-		case string:
-			err = o.set_param_text(param, t, final)
-		case int:
-			err = o.set_param_long(param, t, final)
-		case time.Time:
-			if t.IsZero() {
-				err = o.set_param_null(param, final)
-			} else {
-				err = o.set_param_timestamp(param, t, final)
-			}
-		case float64:
-			err = o.set_param_double(param, t, final)
-		case byte:
-			err = o.set_param_byte(param, t, final)
-		case nil:
-			err = o.set_param_null(param, final)
-		default:
-			return fmt.Errorf("data type not supported: %v", t)
-		}
-		if err != nil {
-			return fmt.Errorf("param: %v, err: %v, data: %v", param, err, p.Data)
-		}
-	}
-	return nil
-}
-
-func (o *Query) Set_param_p(set []Setp) error {
-	lock.Lock()
-	defer lock.Unlock()
-	final := false
-	var err error
-	for i, p := range set {
-		if i == len(set)-1 {
-			final = true
-		}
-		switch t := p.Data.(type) {
-		case string:
-			err = o.set_param_text(p.Col, t, final)
-		case int:
-			err = o.set_param_long(p.Col, t, final)
-		case time.Time:
-			err = o.set_param_timestamp(p.Col, t, final)
-		case float64:
-			err = o.set_param_double(p.Col, t, final)
-		case byte:
-			err = o.set_param_byte(p.Col, t, final)
-		case int16:
-			err = o.set_param_short(p.Col, t, final)
-		case nil:
-			err = o.set_param_null(p.Col, final)
-		default:
-			return fmt.Errorf("data type not supported: %v", t)
-		}
-		if err != nil {
-			return fmt.Errorf("%v, %v, %v", p.Col, err)
-		}
-	}
-	return nil
-}
-
-func (o *Query) Set_param_text(param interface{}, v string, final bool) error {
-	lock.Lock()
-	defer lock.Unlock()
-	return o.set_param_text(param, v, final)
-}
-
-func (o *Query) Set_param_long(param interface{}, v int, final bool) error {
-	lock.Lock()
-	defer lock.Unlock()
-	return o.set_param_long(param, v, final)
-}
-
-func (o *Query) Set_param_short(param interface{}, v int16, final bool) error {
-	lock.Lock()
-	defer lock.Unlock()
-	return o.set_param_short(param, v, final)
-}
-
-func (o *Query) Set_param_double(param interface{}, v float64, final bool) error {
-	lock.Lock()
-	defer lock.Unlock()
-	return o.set_param_double(param, v, final)
-}
-
-func (o *Query) Set_param_byte(param interface{}, v byte, final bool) error {
-	lock.Lock()
-	defer lock.Unlock()
-	return o.set_param_byte(param, v, final)
-}
-
-// msaccess does not like fractional seconds. Use Truncate_seconds(true) option.
-//
-func (o *Query) Set_param_timestamp(param interface{}, v time.Time, final bool) error {
-	lock.Lock()
-	defer lock.Unlock()
-	return o.set_param_timestamp(param, v, final)
-}
-
-func (o *Query) Set_param_null(param interface{}, final bool) error {
-	lock.Lock()
-	defer lock.Unlock()
-	return o.set_param_null(param, final)
-}
-
-func (o *Query) Get_total_rows() int {
-	lock.Lock()
-	defer lock.Unlock()
-	return int(C.odbGetTotalRows(o.h))
-}
-
-func (o *Query) Detach() (err error) {
-	lock.Lock()
-	defer lock.Unlock()
-	if !b2b(C.odbDetachQry(o.h)) {
-		err = oe2err(o.h)
-	}
-	return
-}
-
-func (o *Query) Get_total_params() int {
-	lock.Lock()
-	defer lock.Unlock()
-	return int(C.odbGetTotalParams(o.h))
-}
-
-func (o *Query) Execute(sql string) error {
-	lock.Lock()
-	defer lock.Unlock()
-	var r bool
-	if 0 < len(sql) {
+	switch sql {
+	case Sql_get_type_info:
+		r.special = sql
+	default:
 		s := new_s(sql)
 		defer s.free()
-		r = b2b(C.odbExecute(o.h, s.p))
+		if !dB2b(C.odbPrepare(r.h, s.p)) {
+			err := oe2err(r.h)
+			C.odbFree(r.h)
+			return nil, err
+		}
+	}
+	o.stmts[r] = true
+	return r, nil
+}
+
+type Stmt struct {
+	con            *Conn
+	h              C.odbHANDLE
+	bindp          map[C.odbUSHORT]Data
+	fetch_err      error
+	bound          bool
+	ns             *named_sql
+	special        string
+	identity_table string // only msaccess
+}
+
+// only one string allowed
+//
+func (o *Stmt) execute(sql ...string) error {
+	o.fetch_err = nil
+	r := false
+	if sql != nil && 0 < len(sql) {
+		s := new_s(sql[0])
+		defer s.free()
+		r = dB2b(C.odbExecute(o.h, s.p))
 	} else {
-		r = b2b(C.odbExecute(o.h, C.odbPCSTR(nil)))
+		r = dB2b(C.odbExecute(o.h, C.odbPCSTR(nil)))
 	}
-	if r {
+	if !r {
+		return oe2err(o.h)
+	}
+	return nil
+}
+
+func (o *Stmt) fetch_row() error {
+	if dB2b(C.odbFetchRow(o.h)) {
 		return nil
 	}
 	return oe2err(o.h)
 }
 
-func (o *Query) Fetch_row() error {
-	lock.Lock()
-	defer lock.Unlock()
-	if b2b(C.odbFetchRow(o.h)) {
-		return nil
-	}
-	return oe2err(o.h)
-}
-
-func (o *Query) Fetch_row_abs(row int) (err error) {
-	if !b2b(C.odbFetchRowEx(o.h, C.ODB_FETCH_ABS, C.odbLONG(row))) {
-		err = oe2err(o.h)
-	}
-	return
-}
-
-func (o *Query) Free() {
-	lock.Lock()
-	defer lock.Unlock()
+func (o *Stmt) free() {
 	if o.h != nil {
 		C.odbDropQry(o.h)
 		C.odbFree(o.h)
+		delete(o.con.stmts, o)
 		o.h = nil
-	}
-}
-
-// col: int | string
-//
-func (o *Query) Col_data_text(col interface{}) (v string) {
-	lock.Lock()
-	defer lock.Unlock()
-	if col := o.get_param(o, col); 0 < col && C.odbColDataLen(o.h, col) != C.ODB_NULL {
-		v = C.GoString((*C.char)(unsafe.Pointer(C.odbColDataText(o.h, col))))
-	}
-	return
-}
-
-// col: int | string
-//
-func (o *Query) Col_data_time(col interface{}) (v time.Time) {
-	lock.Lock()
-	defer lock.Unlock()
-	if col := o.get_param(o, col); 0 < col && C.odbColDataLen(o.h, col) != C.ODB_NULL {
-		ts := C.odbColDataTimestamp(o.h, col)
-		v = time.Date(
-			int(ts.sYear),
-			time.Month(ts.usMonth),
-			int(ts.usDay),
-			int(ts.usHour),
-			int(ts.usMinute),
-			int(ts.usSecond),
-			int(ts.ulFraction),
-			time.Local,
-		)
-	}
-	return
-}
-
-// col: int | string
-//
-func (o *Query) Col_data_byte(col interface{}) (v byte) {
-	lock.Lock()
-	defer lock.Unlock()
-	if col := o.get_param(o, col); 0 < col && C.odbColDataLen(o.h, col) != C.ODB_NULL {
-		v = byte(C.odbColDataByte(o.h, col))
-	}
-	return
-}
-
-// col: int | string
-//
-func (o *Query) Col_data_short(col interface{}) (v int16) {
-	lock.Lock()
-	defer lock.Unlock()
-	if col := o.get_param(o, col); 0 < col && C.odbColDataLen(o.h, col) != C.ODB_NULL {
-		v = int16(C.odbColDataShort(o.h, col))
-	}
-	return
-}
-
-// col: int | string
-//
-func (o *Query) Col_data_double(col interface{}) (v float64) {
-	lock.Lock()
-	defer lock.Unlock()
-	if col := o.get_param(o, col); 0 < col && C.odbColDataLen(o.h, col) != C.ODB_NULL {
-		v = float64(C.odbColDataDouble(o.h, col))
-	}
-	return
-}
-
-// col: int | string
-//
-func (o *Query) Col_data_long(col interface{}) (v int) {
-	lock.Lock()
-	defer lock.Unlock()
-	if col := o.get_param(o, col); 0 < col && C.odbColDataLen(o.h, col) != C.ODB_NULL {
-		v = int(C.odbColDataLong(o.h, col))
-	}
-	return
-}
-
-// col: int | string
-//
-func (o *Query) Col_data_type(col interface{}) (v Data) {
-	lock.Lock()
-	defer lock.Unlock()
-	if col := o.get_param(o, col); 0 < col && C.odbColDataLen(o.h, col) != C.ODB_NULL {
-		v = Data((C.odbColDataType(o.h, col)))
-	}
-	return
-}
-
-// col: int | string
-//
-func (o *Query) Col_data_len(col interface{}) int {
-	lock.Lock()
-	defer lock.Unlock()
-	if col := o.get_param(o, col); 0 < col {
-		return int(C.odbColDataLen(o.h, col))
-	}
-	return -1
-}
-
-// col: int | string
-//
-func (o *Query) Col_is_null(col interface{}) bool {
-	lock.Lock()
-	defer lock.Unlock()
-	if col := o.get_param(o, col); 0 < col && C.odbColDataLen(o.h, col) == C.ODB_NULL {
-		return true
-	}
-	return false
-}
-
-func (o *Query) No_data() bool {
-	lock.Lock()
-	defer lock.Unlock()
-	return b2b(C.odbNoData(o.h))
-}
-
-func (o *Query) Get_total_columns() int {
-	lock.Lock()
-	defer lock.Unlock()
-	return int(C.odbGetTotalCols(o.h))
-}
-
-func (o *Query) Col_name(col int) string {
-	lock.Lock()
-	defer lock.Unlock()
-	if r := C.odbColName(o.h, C.odbUSHORT(col)); r == nil {
-		return ``
-	} else {
-		return C.GoString((*C.char)(unsafe.Pointer(r)))
+		o.bindp = map[C.odbUSHORT]Data{}
 	}
 }
 
 // Convert a Foxpro Memo string to a map
-//
+
 func S2memo(s string) (r map[string]string) {
 	r = map[string]string{}
 	if 0 < len(s) {
@@ -772,145 +466,82 @@ func Memo2s(m map[string]string) string {
 	return strings.Join(a, "\r")
 }
 
-// type handle C.odbHANDLE
-
-var efalse = errors.New("false")
-
-func (o *Query) get_param(q *Query, param interface{}) C.odbUSHORT {
-	switch t := param.(type) {
-	case int:
-		return C.odbUSHORT(t)
-	case string:
-		s := new_s(t)
-		defer s.free()
-		return C.odbUSHORT(C.odbColNum(q.h, s.p))
-	default:
-		return C.odbUSHORT(0)
+// col: 1 based
+func (o *Stmt) bind(col C.odbUSHORT, data Data, last C.odbBOOL) (err error) {
+	desc := odb2sql[o.con.driver][data]
+	if !dB2b(C.odbBindParamEx(
+		o.h,
+		col,
+		C.ODB_PARAM_INPUT,
+		data.short(),
+		0,
+		desc.sql_type,
+		desc.col_size,
+		desc.dec_digits,
+		last,
+	)) {
+		return oe2err(o.h)
 	}
+	return
 }
 
-func (o *Con) prepare_all(sql string, proc bool) (q *Query, err error) {
-	lock.Lock()
-	defer lock.Unlock()
-	q = &Query{
-		con: o,
-		h:   C.odbAllocate(o.h),
-	}
-	if q.h == nil {
-		q = nil
-	} else {
-		s := new_s(sql)
-		defer s.free()
-		if proc {
-			if !b2b(C.odbPrepareProc(q.h, s.p)) {
-				err = oe2err(q.h)
-				C.odbFree(q.h)
-				q = nil
+// col: 1 based
+func (o *Stmt) set(col C.odbUSHORT, i interface{}, last C.odbBOOL) (err error) {
+	switch v := i.(type) {
+	case []byte:
+		s := new_b(v)
+		if !dB2b(C.odbSetParam(o.h, col, (C.odbPVOID)(s.p), C.odbLONG(len(v)), last)) {
+			s.free()
+			return oe2err(o.h)
+		}
+		s.free()
+	case string:
+		s := new_s(v)
+		if !dB2b(C.odbSetParam(o.h, col, (C.odbPVOID)(s.p), C.odbLONG(len(v)), last)) {
+			s.free()
+			return oe2err(o.h)
+		}
+		s.free()
+	case time.Time:
+		var ts C.odbTIMESTAMP
+		ts.sYear = C.odbSHORT(v.Year())
+		ts.usMonth = C.odbUSHORT(v.Month())
+		ts.usDay = C.odbUSHORT(v.Day())
+		ts.usHour = C.odbUSHORT(v.Hour())
+		ts.usMinute = C.odbUSHORT(v.Minute())
+		ts.usSecond = C.odbUSHORT(v.Second())
+		ts.ulFraction = C.odbULONG(v.Nanosecond())
+		if !dB2b(C.odbSetParamTimestamp(o.h, col, &ts, last)) {
+			return oe2err(o.h)
+		}
+	case nil:
+		if !dB2b(C.odbSetParamNull(o.h, col, last)) {
+			return oe2err(o.h)
+		}
+	case int64:
+		if o.con.driver == Msaccess {
+			if !dB2b(C.odbSetParamDouble(o.h, col, C.odbDOUBLE(float64(v)), last)) {
+				return oe2err(o.h)
 			}
 		} else {
-			if !b2b(C.odbPrepare(q.h, s.p)) {
-				err = oe2err(q.h)
-				C.odbFree(q.h)
-				q = nil
+			if !dB2b(C.odbSetParamLongLong(o.h, col, C.odbULONGLONG(v), last)) {
+				return oe2err(o.h)
 			}
 		}
-	}
-	if q != nil {
-		o.qrys[q] = true
-	}
-	return
-}
-
-func (o *Query) input(param interface{}, dt Data, sql_type string, final bool) (err error) {
-	var st_num C.odbSHORT
-	var col_size C.odbULONG
-	var dec_dig C.odbSHORT
-	if dt == Binary_msaccess_memo {
-		col_size = 65536
-		st_num = C.SQL_TEXT
-	} else {
-		st := new_s(sql_type)
-		defer st.free()
-		if !b2b(C.odbDescribeSqlType(o.con.h, st.p, &st_num, &col_size, &dec_dig)) {
-			err = oe2err(o.h)
-			return
+	case float64:
+		if !dB2b(C.odbSetParamDouble(o.h, col, C.odbDOUBLE(v), last)) {
+			return oe2err(o.h)
 		}
-	}
-	if !b2b(C.odbBindParamEx(o.h, o.get_param(o, param), Input.ushort(), C.odbSHORT(dt), 0, st_num, col_size, dec_dig, b2B(final))) {
-		err = oe2err(o.h)
-	}
-	return
-}
-
-func (o *Query) set_param(param interface{}, v string, final bool) (err error) {
-	s := new_s(v)
-	defer s.free()
-	l := len(v)
-	if !b2b(C.odbSetParam(o.h, o.get_param(o, param), (C.odbPVOID)(s.p), C.odbLONG(l), b2B(final))) {
-		err = oe2err(o.h)
-	}
-	return
-}
-
-func (o *Query) set_param_text(param interface{}, v string, final bool) (err error) {
-	s := new_s(v)
-	defer s.free()
-	if !b2b(C.odbSetParamText(o.h, o.get_param(o, param), s.p, b2B(final))) {
-		err = oe2err(o.h)
-	}
-	return
-}
-
-func (o *Query) set_param_long(param interface{}, v int, final bool) (err error) {
-	if !b2b(C.odbSetParamLong(o.h, o.get_param(o, param), C.odbULONG(v), b2B(final))) {
-		err = oe2err(o.h)
-	}
-	return
-}
-
-func (o *Query) set_param_short(param interface{}, v int16, final bool) (err error) {
-	if !b2b(C.odbSetParamShort(o.h, o.get_param(o, param), C.odbUSHORT(v), b2B(final))) {
-		err = oe2err(o.h)
-	}
-	return
-}
-
-func (o *Query) set_param_double(param interface{}, v float64, final bool) (err error) {
-	if !b2b(C.odbSetParamDouble(o.h, o.get_param(o, param), C.odbDOUBLE(v), b2B(final))) {
-		err = oe2err(o.h)
-	}
-	return
-}
-
-func (o *Query) set_param_byte(param interface{}, v byte, final bool) (err error) {
-	if !b2b(C.odbSetParamByte(o.h, o.get_param(o, param), C.odbBYTE(v), b2B(final))) {
-		err = oe2err(o.h)
-	}
-	return
-}
-
-func (o *Query) set_param_timestamp(param interface{}, v time.Time, final bool) (err error) {
-	var ts C.odbTIMESTAMP
-	ts.sYear = C.odbSHORT(v.Year())
-	ts.usMonth = C.odbUSHORT(v.Month())
-	ts.usDay = C.odbUSHORT(v.Day())
-	ts.usHour = C.odbUSHORT(v.Hour())
-	ts.usMinute = C.odbUSHORT(v.Minute())
-	ts.usSecond = C.odbUSHORT(v.Second())
-	if o.con.truncate_seconds {
-		ts.ulFraction = 0
-	} else {
-		ts.ulFraction = C.odbULONG(v.Nanosecond())
-	}
-	if !b2b(C.odbSetParamTimestamp(o.h, o.get_param(o, param), &ts, b2B(final))) {
-		err = oe2err(o.h)
-	}
-	return
-}
-
-func (o *Query) set_param_null(param interface{}, final bool) (err error) {
-	if !b2b(C.odbSetParamNull(o.h, o.get_param(o, param), b2B(final))) {
-		err = oe2err(o.h)
+	case bool:
+		var b C.odbBYTE
+		if v == true {
+			b = C.odbBYTE(1)
+		}
+		if !dB2b(C.odbSetParamByte(o.h, col, b, last)) {
+			return oe2err(o.h)
+		}
+	default:
+		return fmt.Errorf("invalid type: parama: %v, %T", col, v)
 	}
 	return
 }
@@ -921,6 +552,10 @@ type nchar struct {
 
 func new_s(s string) *nchar {
 	return &nchar{(*C.odbCHAR)(C.CString(s))}
+}
+
+func new_b(b []byte) *nchar {
+	return &nchar{(*C.odbCHAR)(C.CBytes(b))}
 }
 
 func (o *nchar) free() {
@@ -937,7 +572,7 @@ func b2B(b bool) C.odbBOOL {
 	return C.odbBOOL(0)
 }
 
-func b2b(b C.odbBOOL) bool {
+func dB2b(b C.odbBOOL) bool {
 	if b == 0 {
 		return false
 	}
@@ -946,4 +581,530 @@ func b2b(b C.odbBOOL) bool {
 
 func oe2err(h C.odbHANDLE) error {
 	return errors.New(C.GoString((*C.char)(unsafe.Pointer(C.odbGetErrorText(h)))))
+}
+
+// Driver name
+const Driver_msaccess = "odbtp_msaccess"
+
+var driver_name_ct uint32
+
+// Returns the registered driver name to use in sql.Open(). The driver name pattern is
+// odbtp_msaccess_1, odbtp_msaccess_...
+//
+// driver_name := odb.Register(
+//  	"<host_name>",
+//  	odb.Normal,
+//  	`DRIVER=Microsoft Access Driver (*.mdb);DBQ=c:/<file path to mdb>;ImplicitCommitSync=Yes`,
+//  	odb.Int_opt(odb.Query_timeout, 20),
+//  	odb.Bool_opt(odb.Unicodesql, true),
+//  	odb.Bool_opt(odb.Describe_params, true),
+//  	odb.Bool_opt(odb.Mapchar2wchar, true),
+//  	odb.Bool_opt(odb.Prepare_is_template, true),
+// )
+// db, err := sql.Open(driver_name, ``)
+// if err != nil {
+//  	j.Err(err)
+//  	return
+// }
+// defer db.Close()
+//
+func Register(address string, login Login, odbc_dsn string, opt ...option) (driver_name string) {
+	driver_name = fmt.Sprintf("%v_%v", Driver_msaccess, atomic.AddUint32(&driver_name_ct, 1))
+	sql.Register(driver_name, &Driver{
+		addr:     address,
+		login:    login,
+		odbc_dsn: odbc_dsn,
+		opt:      opt,
+	})
+	return
+}
+
+type option func(o *Conn) error
+
+type bool_option C.odbLONG
+
+const (
+	// Example in query: {{.id}} becomes sql.Named("id", <value)
+	Prepare_is_template bool_option = 1 << iota * -1 // ODB_ATTR are positive
+	Cache_procs                     = C.ODB_ATTR_CACHEPROCS
+	Mapchar2wchar                   = C.ODB_ATTR_MAPCHARTOWCHAR
+	Describe_params                 = C.ODB_ATTR_DESCRIBEPARAMS
+	Unicodesql                      = C.ODB_ATTR_UNICODESQL
+)
+
+func Bool_opt(opt bool_option, enable bool) option {
+	return func(o *Conn) error {
+		switch opt {
+		case Prepare_is_template:
+			o.prepare_is_template = enable
+		default:
+			return o.set_attr_bool(opt, enable)
+		}
+		return nil
+	}
+}
+
+type int_option C.odbLONG
+
+const (
+	Query_timeout int_option = C.ODB_ATTR_QUERYTIMEOUT
+	Vardatasize              = C.ODB_ATTR_VARDATASIZE
+)
+
+func Int_opt(opt int_option, i uint64) option {
+	return func(o *Conn) error {
+		return o.set_attr_int(opt, i)
+	}
+}
+
+type Driver struct {
+	addr     string
+	odbc_dsn string
+	login    Login
+	opt      []option
+	con      *Conn
+}
+
+// dsn is not used. Use Register()
+//
+func (o *Driver) Open(dsn string) (driver.Conn, error) {
+	if 0 < len(dsn) {
+		return nil, fmt.Errorf("use Register")
+	}
+	if len(o.odbc_dsn) == 0 {
+		return nil, fmt.Errorf("missing Dsn doption")
+	}
+	con, err := new_con(o.addr, o.login, o.odbc_dsn)
+	if err != nil {
+		return nil, err
+	}
+	if o.opt != nil {
+		for _, oo := range o.opt {
+			if err := oo(con); err != nil {
+				con.logout(true)
+				return nil, err
+			}
+		}
+	}
+	return con, nil
+}
+func (o *Conn) Prepare(query string) (ds driver.Stmt, err error) {
+	return o.PrepareContext(context.Background(), query)
+}
+
+func (o *Conn) PrepareContext(ctx context.Context, query string) (ds driver.Stmt, err error) {
+	select {
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	default:
+	}
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		switch query {
+		case Sql_get_type_info:
+		default:
+		}
+		var ns *named_sql
+		if o.prepare_is_template {
+			ns = new_named_sql(query)
+			if ns.err != nil {
+				err = ns.err
+				return
+			}
+			query = ns.sql
+		}
+		var st *Stmt
+		st, err = o.prepare(query)
+		if err != nil {
+			return
+		}
+		st.ns = ns
+		ds = st
+		return
+	}()
+	select {
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	case <-done:
+	}
+	return
+}
+
+type named_sql struct {
+	sql  string
+	uniq map[string]string
+	pos  map[int]string
+	err  error
+}
+
+func new_named_sql(tp_s string) (r *named_sql) {
+	r = &named_sql{
+		uniq: map[string]string{},
+		pos:  map[int]string{},
+	}
+	if !strings.Contains(tp_s, "{{") {
+		r.sql = tp_s
+		return
+	}
+	var tree map[string]*parse.Tree
+	tree, r.err = parse.Parse(``, tp_s, ``, ``, map[string]interface{}{})
+	if r.err != nil {
+		return
+	}
+	i := 0
+	for _, n := range tree[""].Root.Nodes {
+		if an, ok := n.(*parse.ActionNode); ok {
+			if an.Pipe == nil {
+				continue
+			}
+			if len(an.Pipe.Cmds) == 1 {
+				name := an.Pipe.Cmds[0].String()[1:] // remove dot
+				r.uniq[name] = `?`
+				r.pos[i] = name
+				i++
+			}
+		}
+	}
+	var buf bytes.Buffer
+	tp := template.Must(template.New(``).Option("missingkey=error").Parse(tp_s))
+	r.err = tp.Execute(&buf, r.uniq)
+	r.sql = buf.String()
+	return
+}
+
+func (o *Conn) Close() error {
+	o.logout(true)
+	return nil
+}
+
+func (o *Conn) Begin() (driver.Tx, error) {
+	return o.BeginTx(context.Background(), driver.TxOptions{})
+}
+
+// msaccess: sql.LevelReadCommitted or sql.LevelDefault (usually none)
+//
+func (o *Conn) BeginTx(ctx context.Context, opts driver.TxOptions) (tx driver.Tx, err error) {
+	select {
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	default:
+	}
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		// if err = o.drop(); err != nil {
+		// 	return
+		// }
+		if opts.ReadOnly {
+			err = fmt.Errorf("ReadOnly transaction is not supported")
+			return
+		}
+		var isolation C.odbULONG
+		switch o.driver {
+		case Msaccess:
+			switch sql.IsolationLevel(opts.Isolation) {
+			case sql.LevelDefault:
+				isolation = C.ODB_TXN_DEFAULT
+			case sql.LevelReadUncommitted:
+				isolation = C.ODB_TXN_READUNCOMMITTED
+			case sql.LevelReadCommitted:
+				isolation = C.ODB_TXN_READCOMMITTED
+			case sql.LevelRepeatableRead:
+				isolation = C.ODB_TXN_REPEATABLEREAD
+			case sql.LevelSerializable:
+				isolation = C.ODB_TXN_SERIALIZABLE
+			default:
+				err = fmt.Errorf("unsupported isolation level: %v", opts.Isolation)
+				return
+			}
+		case Foxpro:
+			err = fmt.Errorf("unsupported isolation level: %v", opts.Isolation)
+			return
+		default:
+			err = fmt.Errorf("unkown odbc driver and isolation level")
+			return
+		}
+		if !dB2b(C.odbSetAttrLong(o.h, C.ODB_ATTR_TRANSACTIONS, isolation)) {
+			err = oe2err(o.h)
+			return
+		}
+		tx = o
+	}()
+	select {
+	case <-ctx.Done():
+		o.logout(true)
+		return nil, ctx.Err()
+	case <-done:
+	}
+	return
+}
+
+func (o *Conn) Commit() (err error) {
+	if !dB2b(C.odbCommit(o.h)) {
+		return oe2err(o.h)
+	}
+	return nil
+}
+
+func (o *Conn) Rollback() (err error) {
+	if !dB2b(C.odbRollback(o.h)) {
+		return oe2err(o.h)
+	}
+	return nil
+}
+
+func (o *Stmt) Close() error {
+	return nil
+}
+
+func (o *Stmt) NumInput() int {
+	if o.ns != nil && 0 < len(o.ns.uniq) {
+		return len(o.ns.uniq)
+	}
+	return int(C.odbGetTotalParams(o.h))
+}
+
+func (o *Stmt) LastInsertId() (id int64, err error) {
+	if o.con.driver != Msaccess {
+		return 0, driver.ErrSkip
+	}
+	if len(o.identity_table) == 0 {
+		return 0, fmt.Errorf("missing Identity_table arg")
+	}
+	st, err := o.con.prepare(fmt.Sprintf("select @@IDENTITY from [%v]", o.identity_table))
+	if err != nil {
+		return
+	}
+	defer st.free()
+	if err = st.execute(); err != nil {
+		return
+	}
+	dv := make([]driver.Value, 1)
+	if err = st.Next(dv); err != nil {
+		return
+	}
+	var ok bool
+	id, ok = dv[0].(int64)
+	if !ok {
+		return 0, fmt.Errorf("could not convert %v (%T) to int64", dv[0], dv[0])
+	}
+	return
+}
+
+func (o *Stmt) RowsAffected() (int64, error) {
+	return 0, driver.ErrSkip
+}
+
+// The LastInsertId can be retrieved via: select @@IDENTITY from <table>.
+// RowsAffected() is not implemented by msaccess.
+//
+func (o *Stmt) Exec(args []driver.Value) (dr driver.Result, err error) {
+	return nil, driver.ErrSkip
+}
+
+func (o *Stmt) Query(args []driver.Value) (dr driver.Rows, err error) {
+	return nil, driver.ErrSkip
+}
+
+type Identity_table string
+
+func (o *Stmt) CheckNamedValue(nv *driver.NamedValue) (err error) {
+	switch t := nv.Value.(type) {
+	case int:
+		nv.Value = int64(t)
+	case Identity_table:
+		o.identity_table = string(t)
+		err = driver.ErrRemoveArgument
+	case *Identity_table:
+		o.identity_table = string(*t)
+		err = driver.ErrRemoveArgument
+	default:
+	}
+	return
+}
+
+// Must add an Identity_table arg to retrieve the LastInsertId for msaccess
+//
+func (o *Stmt) ExecContext(ctx context.Context, args []driver.NamedValue) (dr driver.Result, err error) {
+	_, err = o.QueryContext(ctx, args)
+	if err == nil {
+		dr = o
+	}
+	return
+}
+
+func (o *Stmt) QueryContext(ctx context.Context, args []driver.NamedValue) (dr driver.Rows, err error) {
+	select {
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	default:
+	}
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		var col C.odbUSHORT
+		var last C.odbBOOL
+		o.bound = false
+		if !o.bound {
+			o.bound = true
+			if o.ns != nil && 0 < len(o.ns.uniq) {
+				args, err = o.named2pos(args)
+				if err != nil {
+					return
+				}
+			}
+			for i, na := range args {
+				col++
+				if (i + 1) == len(args) {
+					last = 1
+				}
+				switch t := na.Value.(type) {
+				case []byte, string:
+					err = o.bind(col, Wchar, last)
+				case int64:
+					if o.con.driver == Msaccess {
+						err = o.bind(col, Double, last)
+					} else {
+						err = o.bind(col, Bigint, last)
+					}
+				case time.Time:
+					err = o.bind(col, Datetime, last)
+				case bool:
+					err = o.bind(col, Bit, last)
+				case float64:
+					err = o.bind(col, Double, last)
+				default:
+					err = fmt.Errorf("type unsupported: %T", t)
+				}
+				if err != nil {
+					return
+				}
+			}
+		}
+		col = 0
+		for i, v := range args {
+			col++
+			if (i + 1) == len(args) {
+				last = 1
+			}
+			if err = o.set(col, v.Value, last); err != nil {
+				return
+			}
+		}
+		if err = o.execute(o.special); err != nil {
+			return
+		}
+		dr = o
+		return
+	}()
+	select {
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	case <-done:
+	}
+	return
+}
+
+func (o *Stmt) named2pos(args []driver.NamedValue) (pos []driver.NamedValue, err error) {
+	if len(args) != len(o.ns.uniq) {
+		return nil, fmt.Errorf("template uniq args != args: %v vs %v", len(o.ns.uniq), len(args))
+	}
+	n2nv := map[string]*driver.NamedValue{}
+	leftover := map[string]bool{}
+	for k := range o.ns.uniq {
+		leftover[k] = true
+	}
+	for i, nv := range args {
+		if _, ok := o.ns.uniq[nv.Name]; !ok {
+			return nil, fmt.Errorf("missing arg Name in template: %v", nv.Name)
+		}
+		n2nv[nv.Name] = &args[i]
+		delete(leftover, nv.Name)
+	}
+	if len(leftover) != 0 {
+		return nil, fmt.Errorf("template args not used: %v", leftover)
+	}
+	pos = make([]driver.NamedValue, len(o.ns.pos))
+	for i := range pos {
+		pos[i] = *n2nv[o.ns.pos[i]]
+	}
+	return
+}
+
+func (o *Stmt) Columns() (s []string) {
+	total := int(C.odbGetTotalCols(o.h))
+	s = make([]string, 0, total)
+	for i := 1; i <= total; i++ {
+		if r := C.odbColName(o.h, C.odbUSHORT(i)); r != nil {
+			s = append(s, C.GoString((*C.char)(unsafe.Pointer(r))))
+		} else {
+			return
+		}
+	}
+	return
+}
+
+func (o *Stmt) Next(dest []driver.Value) (err error) {
+	if err = o.fetch_row(); err != nil {
+		return err
+	}
+	if dB2b(C.odbNoData(o.h)) {
+		err = io.EOF
+		return
+	}
+	var col C.odbUSHORT
+	for i := range dest {
+		col++
+		byte_len := C.odbColDataLen(o.h, col)
+		if byte_len == C.ODB_NULL {
+			dest[i] = nil
+			continue
+		}
+		dt := Data(C.odbColDataType(o.h, col))
+		if _, ok := odb2sql[o.con.driver][dt]; !ok {
+			return fmt.Errorf("unknown Data type: %v", dt)
+		}
+		switch dt {
+		case Char, Wchar:
+			// todo: size is limited to C.int (2 GB), but odbColDataText is C.LONG
+			// on amd64. Bigger []byte could be delivered
+			if len(o.special) == 0 {
+				dest[i] = C.GoBytes(unsafe.Pointer(C.odbColDataText(o.h, col)), (C.int)(byte_len))
+			} else {
+				// This is need for SQLGetTypeInfo. The column size returns 4G but the data is
+				// null terminated and is not ODB_NULL. Some of the fields have zero bytes.
+				dest[i] = C.GoString((*C.char)(unsafe.Pointer(C.odbColDataText(o.h, col))))
+			}
+		case Int:
+			dest[i] = int64(C.odbColDataLong(o.h, col))
+		case Bigint:
+			dest[i] = int64(C.odbColDataLongLong(o.h, col))
+		case Datetime:
+			ts := C.odbColDataTimestamp(o.h, col)
+			dest[i] = time.Date(
+				int(ts.sYear),
+				time.Month(ts.usMonth),
+				int(ts.usDay),
+				int(ts.usHour),
+				int(ts.usMinute),
+				int(ts.usSecond),
+				int(ts.ulFraction),
+				time.Local,
+			)
+		case Double:
+			dest[i] = float64(C.odbColDataDouble(o.h, col))
+		case Bit:
+			if C.odbColDataByte(o.h, col) == 0 {
+				dest[i] = false
+			} else {
+				dest[i] = true
+			}
+		case Smallint:
+			dest[i] = int64(C.odbColDataShort(o.h, col))
+		default:
+			return fmt.Errorf("invalid type: column: %v, %v", i+1, dt)
+		}
+	}
+	return nil
 }
