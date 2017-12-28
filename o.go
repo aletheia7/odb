@@ -590,23 +590,22 @@ var driver_name_ct uint32
 
 // Returns the registered driver name to use in sql.Open(). The driver name pattern is
 // odbtp_msaccess_1, odbtp_msaccess_...
-//
-// driver_name := odb.Register(
-//  	"<host_name>",
-//  	odb.Normal,
-//  	`DRIVER=Microsoft Access Driver (*.mdb);DBQ=c:/<file path to mdb>;ImplicitCommitSync=Yes`,
-//  	odb.Int_opt(odb.Query_timeout, 20),
-//  	odb.Bool_opt(odb.Unicodesql, true),
-//  	odb.Bool_opt(odb.Describe_params, true),
-//  	odb.Bool_opt(odb.Mapchar2wchar, true),
-//  	odb.Bool_opt(odb.Prepare_is_template, true),
-// )
-// db, err := sql.Open(driver_name, ``)
-// if err != nil {
-//  	j.Err(err)
-//  	return
-// }
-// defer db.Close()
+//    driver_name := odb.Register(
+//     	"<host_name>",
+//     	odb.Normal,
+//     	`DRIVER=Microsoft Access Driver (*.mdb);DBQ=c:/<file path to mdb>;ImplicitCommitSync=Yes`,
+//     	odb.Int_opt(odb.Query_timeout, 20),
+//     	odb.Bool_opt(odb.Unicodesql, true),
+//     	odb.Bool_opt(odb.Describe_params, true),
+//     	odb.Bool_opt(odb.Mapchar2wchar, true),
+//     	odb.Bool_opt(odb.Prepare_is_template, true),
+//    )
+//   db, err := sql.Open(driver_name, ``)
+//   if err != nil {
+//    	j.Err(err)
+//    	return
+//   }
+//   defer db.Close()
 //
 func Register(address string, login Login, odbc_dsn string, opt ...option) (driver_name string) {
 	driver_name = fmt.Sprintf("%v_%v", Driver_msaccess, atomic.AddUint32(&driver_name_ct, 1))
@@ -896,7 +895,6 @@ func (o *Stmt) RowsAffected() (int64, error) {
 	return 0, driver.ErrSkip
 }
 
-// The LastInsertId can be retrieved via: select @@IDENTITY from <table>.
 // RowsAffected() is not implemented by msaccess.
 //
 func (o *Stmt) Exec(args []driver.Value) (dr driver.Result, err error) {
