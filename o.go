@@ -1054,7 +1054,7 @@ func (o *Stmt) Next(dest []driver.Value) (err error) {
 	var col C.odbUSHORT
 	for i := range dest {
 		col++
-		byte_len := C.odbColDataLen(o.h, col)
+		byte_len := int32(C.odbColDataLen(o.h, col))
 		if byte_len == C.ODB_NULL {
 			dest[i] = nil
 			continue
@@ -1065,15 +1065,7 @@ func (o *Stmt) Next(dest []driver.Value) (err error) {
 		}
 		switch dt {
 		case Char, Wchar:
-			// todo: size is limited to C.int (2 GB), but odbColDataText is C.LONG
-			// on amd64. Bigger []byte could be delivered
-			if len(o.special) == 0 {
-				dest[i] = C.GoBytes(unsafe.Pointer(C.odbColDataText(o.h, col)), (C.int)(byte_len))
-			} else {
-				// This is need for SQLGetTypeInfo. The column size returns 4G but the data is
-				// null terminated and is not ODB_NULL. Some of the fields have zero bytes.
-				dest[i] = C.GoString((*C.char)(unsafe.Pointer(C.odbColDataText(o.h, col))))
-			}
+			dest[i] = C.GoBytes(unsafe.Pointer(C.odbColDataText(o.h, col)), (C.int)(byte_len))
 		case Int:
 			dest[i] = int64(C.odbColDataLong(o.h, col))
 		case Bigint:
