@@ -32,10 +32,8 @@ import (
 type driver_odbc string
 
 const (
-	Default_port                  = 2799
-	Sql_get_type_info             = "||SQLGetTypeInfo"
-	msaccess          driver_odbc = `DRIVER=Microsoft Access Driver (*.mdb)`
-	foxpro                        = `DRIVER={Microsoft Visual FoxPro Driver}`
+	Default_port      = 2799
+	Sql_get_type_info = "||SQLGetTypeInfo" // Special odbtp query. Use in QueryContext().
 )
 
 type Login C.odbUSHORT
@@ -648,6 +646,18 @@ func (o *Stmt) CheckNamedValue(nv *driver.NamedValue) (err error) {
 	case *Identity_table:
 		o.identity_table = string(*t)
 		err = driver.ErrRemoveArgument
+	case int:
+		if o.con.driver == msaccess {
+			nv.Value = float64(t) // msaccess does not have long/int64
+		} else {
+			nv.Value, err = driver.DefaultParameterConverter.ConvertValue(nv.Value)
+		}
+	case int64:
+		if o.con.driver == msaccess {
+			nv.Value = float64(t) // msaccess does not have long/int64
+		} else {
+			nv.Value, err = driver.DefaultParameterConverter.ConvertValue(nv.Value)
+		}
 	default:
 		nv.Value, err = driver.DefaultParameterConverter.ConvertValue(nv.Value)
 	}
@@ -690,20 +700,15 @@ func (o *Stmt) QueryContext(ctx context.Context, args []driver.NamedValue) (dr d
 				}
 				switch t := na.Value.(type) {
 				case []byte, string:
-					err = o.bind(col, Wchar, last)
+					err = o.bind(col, owchar, last)
 				case int64:
-					// todo really?
-					if o.con.driver == msaccess {
-						err = o.bind(col, Double, last)
-					} else {
-						err = o.bind(col, Bigint, last)
-					}
+					err = o.bind(col, obigint, last)
 				case time.Time:
-					err = o.bind(col, Datetime, last)
+					err = o.bind(col, odatetime, last)
 				case bool:
-					err = o.bind(col, Bit, last)
+					err = o.bind(col, obit, last)
 				case float64:
-					err = o.bind(col, Double, last)
+					err = o.bind(col, odouble, last)
 				default:
 					err = fmt.Errorf("type unsupported: %T", t)
 				}
@@ -801,25 +806,25 @@ func (o *Stmt) Next(dest []driver.Value) (err error) {
 			return fmt.Errorf("unknown Data type: %v", dt)
 		}
 		switch dt {
-		case Char, Wchar:
+		case ochar, owchar:
 			if is_nil && o.con.zero_scan {
 				dest[i] = []byte{}
 			} else {
 				dest[i] = C.GoBytes(unsafe.Pointer(C.odbColDataText(o.h, col)), (C.int)(byte_len))
 			}
-		case Int:
+		case oint:
 			if is_nil && o.con.zero_scan {
 				dest[i] = int64(0)
 			} else {
 				dest[i] = int64(C.odbColDataLong(o.h, col))
 			}
-		case Bigint:
+		case obigint:
 			if is_nil && o.con.zero_scan {
 				dest[i] = int64(0)
 			} else {
 				dest[i] = int64(C.odbColDataLongLong(o.h, col))
 			}
-		case Datetime:
+		case odatetime:
 			if is_nil && o.con.zero_scan {
 				dest[i] = time.Time{}
 			} else {
@@ -835,13 +840,13 @@ func (o *Stmt) Next(dest []driver.Value) (err error) {
 					time.Local,
 				)
 			}
-		case Double:
+		case odouble:
 			if is_nil && o.con.zero_scan {
 				dest[i] = float64(0)
 			} else {
 				dest[i] = float64(C.odbColDataDouble(o.h, col))
 			}
-		case Bit:
+		case obit:
 			if is_nil && o.con.zero_scan {
 				dest[i] = false
 			} else {
@@ -851,7 +856,7 @@ func (o *Stmt) Next(dest []driver.Value) (err error) {
 					dest[i] = true
 				}
 			}
-		case Smallint:
+		case osmallint:
 			dest[i] = int64(C.odbColDataShort(o.h, col))
 		default:
 			return fmt.Errorf("invalid type: column: %v, %v", i+1, dt)
@@ -938,15 +943,15 @@ func (o data) String() string {
 }
 
 var data2s = map[data]string{
-	Binary:   "Binary",
-	Wchar:    "Wchar",
-	Smallint: "Smallint",
-	Int:      "Int",
-	Bigint:   "Bigint",
-	Bit:      "Bit",
-	Char:     "Char",
-	Double:   "Double",
-	Datetime: "Datetime",
+	obinary:   "Binary",
+	owchar:    "Wchar",
+	osmallint: "Smallint",
+	oint:      "Int",
+	obigint:   "Bigint",
+	obit:      "Bit",
+	ochar:     "Char",
+	odouble:   "Double",
+	odatetime: "Datetime",
 	// Guid:      "Guid",
 	// Usmallint: "Usmallint",
 	// Uint:      "Uint",
@@ -965,15 +970,15 @@ func (o *data) short() C.odbSHORT {
 }
 
 const (
-	Binary   data = C.ODB_BINARY   // (-2)
-	Wchar         = C.ODB_WCHAR    // (-8) Use for unicode
-	Smallint      = C.ODB_SMALLINT // (-15)
-	Int           = C.ODB_INT      // (-16)
-	Bigint        = C.ODB_BIGINT   // (-25)
-	Bit           = C.ODB_BIT      // (-7)
-	Char          = C.ODB_CHAR     // 1
-	Double        = C.ODB_DOUBLE   // 8 same as C.ODB_FLOAT
-	Datetime      = C.ODB_DATETIME // 93
+	obinary   data = C.ODB_BINARY   // (-2)
+	owchar         = C.ODB_WCHAR    // (-8) Use for unicode
+	osmallint      = C.ODB_SMALLINT // (-15)
+	oint           = C.ODB_INT      // (-16)
+	obigint        = C.ODB_BIGINT   // (-25)
+	obit           = C.ODB_BIT      // (-7)
+	ochar          = C.ODB_CHAR     // 1
+	odouble        = C.ODB_DOUBLE   // 8 same as C.ODB_FLOAT
+	odatetime      = C.ODB_DATETIME // 93
 	// Guid           = C.ODB_GUID      // (-11)
 	// Usmallint      = C.ODB_USMALLINT // (-17)
 	// Uint           = C.ODB_UINT      // (-18)
@@ -1002,77 +1007,77 @@ func (o sql_type) String() string {
 
 // duplicates are commented-out
 var sql_type2s = map[sql_type]string{
-	Sql_bit:      "SQL_BIT ",
-	Sql_tinyint:  "SQL_TINYINT",
-	Sql_smallint: "SQL_SMALLINT",
-	// Sql_integer:        "SQL_INTEGER",
-	Sql_int:       "SQL_INT",
-	Sql_bitint:    "SQL_BIGINT",
-	Sql_numeric:   "SQL_NUMERIC",
-	Sql_real:      "SQL_REAL",
-	Sql_float:     "SQL_FLOAT",
-	Sql_double:    "SQL_DOUBLE",
-	Sql_decimal:   "SQL_DECIMAL",
-	Sql_date:      "SQL_DATE",
-	Sql_time:      "SQL_TIME",
-	Sql_timestamp: "SQL_TIMESTAMP",
-	Sql_type_date: "SQL_TYPE_DATE",
-	Sql_type_time: "SQL_TYPE_TIME",
-	// Sql_type_timestamp: "SQL_TYPE_TIMESTAMP",
-	Sql_datetime: "SQL_DATETIME",
-	Sql_char:     "SQL_CHAR",
-	Sql_varchar:  "SQL_VARCHAR",
-	// Sql_longvarchar:   "SQL_LONGVARCHAR",
-	Sql_text:  "SQL_TEXT",
-	Sql_wchar: "SQL_WCHAR",
-	// Sql_nchar:         "SQL_NCHAR",
-	Sql_wvarchar: "SQL_WVARCHAR",
-	// Sql_nvarchar:      "SQL_NVARCHAR",
-	// Sql_wlongvarchar: "SQL_WLONGVARCHAR",
-	Sql_ntext:         "SQL_NTEXT",
-	Sql_binary:        "SQL_BINARY",
-	Sql_varbinary:     "SQL_VARBINARY",
-	Sql_longvarbinary: "SQL_LONGVARBINARY",
-	// Sql_image:         "SQL_IMAGE",
-	Sql_guid:    "SQL_GUID",
-	Sql_variant: "SQL_VARIANT",
+	sql_bit:      "SQL_BIT ",
+	sql_tinyint:  "SQL_TINYINT",
+	sql_smallint: "SQL_SMALLINT",
+	// sql_integer:        "SQL_INTEGER",
+	sql_int:       "SQL_INT",
+	sql_bitint:    "SQL_BIGINT",
+	sql_numeric:   "SQL_NUMERIC",
+	sql_real:      "SQL_REAL",
+	sql_float:     "SQL_FLOAT",
+	sql_double:    "SQL_DOUBLE",
+	sql_decimal:   "SQL_DECIMAL",
+	sql_date:      "SQL_DATE",
+	sql_time:      "SQL_TIME",
+	sql_timestamp: "SQL_TIMESTAMP",
+	sql_type_date: "SQL_TYPE_DATE",
+	sql_type_time: "SQL_TYPE_TIME",
+	// sql_type_timestamp: "SQL_TYPE_TIMESTAMP",
+	sql_datetime: "SQL_DATETIME",
+	sql_char:     "SQL_CHAR",
+	sql_varchar:  "SQL_VARCHAR",
+	// sql_longvarchar:   "SQL_LONGVARCHAR",
+	sql_text:  "SQL_TEXT",
+	sql_wchar: "SQL_WCHAR",
+	// sql_nchar:         "SQL_NCHAR",
+	sql_wvarchar: "SQL_WVARCHAR",
+	// sql_nvarchar:      "SQL_NVARCHAR",
+	// sql_wlongvarchar: "SQL_WLONGVARCHAR",
+	sql_ntext:         "SQL_NTEXT",
+	sql_binary:        "SQL_BINARY",
+	sql_varbinary:     "SQL_VARBINARY",
+	sql_longvarbinary: "SQL_LONGVARBINARY",
+	// sql_image:         "SQL_IMAGE",
+	sql_guid:    "SQL_GUID",
+	sql_variant: "SQL_VARIANT",
 }
 
 const (
-	Sql_bit            sql_type = C.SQL_BIT            // (-7)
-	Sql_tinyint                 = C.SQL_TINYINT        // (-6)
-	Sql_smallint                = C.SQL_SMALLINT       // 5
-	Sql_integer                 = C.SQL_INTEGER        // 4
-	Sql_int                     = C.SQL_INT            // 4
-	Sql_bitint                  = C.SQL_BIGINT         // (-5)
-	Sql_numeric                 = C.SQL_NUMERIC        // 2
-	Sql_real                    = C.SQL_REAL           // 7
-	Sql_float                   = C.SQL_FLOAT          // 6
-	Sql_double                  = C.SQL_DOUBLE         // 8
-	Sql_decimal                 = C.SQL_DECIMAL        // 3
-	Sql_date                    = C.SQL_DATE           // 9
-	Sql_time                    = C.SQL_TIME           // 10
-	Sql_timestamp               = C.SQL_TIMESTAMP      // 11
-	Sql_type_date               = C.SQL_TYPE_DATE      // 91
-	Sql_type_time               = C.SQL_TYPE_TIME      // 92
-	Sql_type_timestamp          = C.SQL_TYPE_TIMESTAMP // 93
-	Sql_datetime                = C.SQL_DATETIME       // 93
-	Sql_char                    = C.SQL_CHAR           // 1
-	Sql_varchar                 = C.SQL_VARCHAR        // 12
-	Sql_longvarchar             = C.SQL_LONGVARCHAR    // (-1)
-	Sql_text                    = C.SQL_TEXT           // (-1)
-	Sql_wchar                   = C.SQL_WCHAR          // (-8)
-	Sql_nchar                   = C.SQL_NCHAR          // (-8)
-	Sql_wvarchar                = C.SQL_WVARCHAR       // (-9)
-	Sql_nvarchar                = C.SQL_NVARCHAR       // (-9)
-	Sql_wlongvarchar            = C.SQL_WLONGVARCHAR   // (-10)
-	Sql_ntext                   = C.SQL_NTEXT          // (-10)
-	Sql_binary                  = C.SQL_BINARY         // (-2)
-	Sql_varbinary               = C.SQL_VARBINARY      // (-3)
-	Sql_longvarbinary           = C.SQL_LONGVARBINARY  // (-4)
-	Sql_image                   = C.SQL_IMAGE          // (-4)
-	Sql_guid                    = C.SQL_GUID           // (-11)
-	Sql_variant                 = C.SQL_VARIANT        // (-150)
+	sql_bit            sql_type = C.SQL_BIT            // (-7)
+	sql_tinyint                 = C.SQL_TINYINT        // (-6)
+	sql_smallint                = C.SQL_SMALLINT       // 5
+	sql_integer                 = C.SQL_INTEGER        // 4
+	sql_int                     = C.SQL_INT            // 4
+	sql_bitint                  = C.SQL_BIGINT         // (-5)
+	sql_numeric                 = C.SQL_NUMERIC        // 2
+	sql_real                    = C.SQL_REAL           // 7
+	sql_float                   = C.SQL_FLOAT          // 6
+	sql_double                  = C.SQL_DOUBLE         // 8
+	sql_decimal                 = C.SQL_DECIMAL        // 3
+	sql_date                    = C.SQL_DATE           // 9
+	sql_time                    = C.SQL_TIME           // 10
+	sql_timestamp               = C.SQL_TIMESTAMP      // 11
+	sql_type_date               = C.SQL_TYPE_DATE      // 91
+	sql_type_time               = C.SQL_TYPE_TIME      // 92
+	sql_type_timestamp          = C.SQL_TYPE_TIMESTAMP // 93
+	sql_datetime                = C.SQL_DATETIME       // 93
+	sql_char                    = C.SQL_CHAR           // 1
+	sql_varchar                 = C.SQL_VARCHAR        // 12
+	sql_longvarchar             = C.SQL_LONGVARCHAR    // (-1)
+	sql_text                    = C.SQL_TEXT           // (-1)
+	sql_wchar                   = C.SQL_WCHAR          // (-8)
+	sql_nchar                   = C.SQL_NCHAR          // (-8)
+	sql_wvarchar                = C.SQL_WVARCHAR       // (-9)
+	sql_nvarchar                = C.SQL_NVARCHAR       // (-9)
+	sql_wlongvarchar            = C.SQL_WLONGVARCHAR   // (-10)
+	sql_ntext                   = C.SQL_NTEXT          // (-10)
+	sql_binary                  = C.SQL_BINARY         // (-2)
+	sql_varbinary               = C.SQL_VARBINARY      // (-3)
+	sql_longvarbinary           = C.SQL_LONGVARBINARY  // (-4)
+	sql_image                   = C.SQL_IMAGE          // (-4)
+	sql_guid                    = C.SQL_GUID           // (-11)
+	sql_variant                 = C.SQL_VARIANT        // (-150)
 )
 
 type desc struct {
@@ -1083,16 +1088,16 @@ type desc struct {
 
 var odb2sql = map[driver_odbc]map[data]desc{
 	msaccess: {
-		Binary:   desc{C.SQL_BINARY, 255, 0},
-		Wchar:    desc{C.SQL_NTEXT, 1073741823, 0}, // memo
-		Smallint: desc{C.SQL_SMALLINT, 5, 0},
-		Int:      desc{C.SQL_INT, 10, 0},
-		Bigint:   desc{C.SQL_DOUBLE, 53, 0},
+		obinary:   desc{C.SQL_BINARY, 255, 0},
+		owchar:    desc{C.SQL_NTEXT, 1073741823, 0}, // memo
+		osmallint: desc{C.SQL_SMALLINT, 5, 0},
+		oint:      desc{C.SQL_INT, 10, 0},
+		obigint:   desc{C.SQL_DOUBLE, 53, 0},
 		// Bigint:   desc{C.SQL_BIGINT, 19, 0}, // missing
-		Bit:      desc{C.SQL_BIT, 1, 0},
-		Char:     desc{C.SQL_CHAR, 255, 0},
-		Double:   desc{C.SQL_DOUBLE, 53, 0},
-		Datetime: desc{C.SQL_DATETIME, 23, 3},
+		obit:      desc{C.SQL_BIT, 1, 0},
+		ochar:     desc{C.SQL_CHAR, 255, 0},
+		odouble:   desc{C.SQL_DOUBLE, 53, 0},
+		odatetime: desc{C.SQL_DATETIME, 23, 3},
 	},
 	// Foxpro: { // https://msdn.microsoft.com/en-us/library/z3y7feks(v=vs.80).aspx TYPE()
 	// 	Char:     "C",
@@ -1105,3 +1110,8 @@ var odb2sql = map[driver_odbc]map[data]desc{
 	// 	// Binary_msaccess_memo: "M",
 	// },
 }
+
+const (
+	msaccess driver_odbc = `DRIVER=Microsoft Access Driver (*.mdb)`
+	foxpro               = `DRIVER={Microsoft Visual FoxPro Driver}`
+)
