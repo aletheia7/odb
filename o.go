@@ -32,8 +32,10 @@ import (
 type driver_odbc string
 
 const (
-	Default_port      = 2799
-	Sql_get_type_info = "||SQLGetTypeInfo" // Special odbtp query. Use in QueryContext().
+	Default_port = 2799
+
+	// Special odbtp query. Use in QueryContext().
+	Sql_get_type_info = "||SQLGetTypeInfo"
 )
 
 type Login C.odbUSHORT
@@ -450,8 +452,8 @@ const Driver_msaccess = "odbtp_msaccess"
 
 var driver_name_ct uint32
 
-// Returns the registered driver name to use in sql.Open(). The driver name pattern is
-// odbtp_msaccess_1, odbtp_msaccess_2, odbtp_msaccess_...
+// Returns the registered driver name to use in sql.Open(). The driver name
+// pattern is odbtp_msaccess_1, odbtp_msaccess_2, odbtp_msaccess_...
 func Register(address string, login Login, odbc_dsn string, opt ...option) (driver_name string) {
 	driver_name = fmt.Sprintf("%v_%v", Driver_msaccess, atomic.AddUint32(&driver_name_ct, 1))
 	sql.Register(driver_name, &Driver{
@@ -468,10 +470,11 @@ type option func(o *Conn) error
 type bool_option C.odbLONG
 
 const (
-	// Example in query: {{.id}} becomes sql.Named("id", <value)
+	// Example in query: {{.id}} becomes sql.Named("id", <value>)
 	Prepare_is_template bool_option = 1 << iota * -1 // ODB_ATTR are positive
 
-	// Zero_scan will cause Stmt.Scan() to return go zero values in place of nil for database null
+	// Zero_scan will cause Stmt.Scan() to return go zero values in place of nil
+	// for database null
 	Zero_scan
 
 	// http://odbtp.sourceforge.net/clilib.html#attributes
