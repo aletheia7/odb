@@ -65,10 +65,6 @@ func (o *Conn) PrepareContext(ctx context.Context, query string) (ds driver.Stmt
 	done := make(chan struct{})
 	go func() {
 		defer close(done)
-		switch query {
-		case Sql_get_type_info:
-		default:
-		}
 		var ns *named_sql
 		if o.prepare_is_template {
 			ns = new_named_sql(query)
@@ -596,6 +592,7 @@ func (o *Stmt) NumInput() int {
 	return int(C.odbGetTotalParams(o.h))
 }
 
+// Only usefull with msaccess
 func (o *Stmt) LastInsertId() (id int64, err error) {
 	if o.con.driver != msaccess {
 		return 0, driver.ErrSkip
@@ -636,6 +633,7 @@ func (o *Stmt) Query(args []driver.Value) (dr driver.Rows, err error) {
 	return nil, driver.ErrSkip
 }
 
+// Used with msaccess.  See ExecContext()
 type Identity_table string
 
 func (o *Stmt) CheckNamedValue(nv *driver.NamedValue) (err error) {
@@ -991,6 +989,7 @@ const (
 	// Time           = C.ODB_TIME      // 92
 )
 
+// Used with SSq Sql_get_type_info query DATA_TYPE column
 func Get_sql_type(i int16) string {
 	return sql_type(i).String()
 }
