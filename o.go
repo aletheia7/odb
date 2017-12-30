@@ -226,10 +226,53 @@ type Conn struct {
 	h                   C.odbHANDLE
 	stmts               map[*Stmt]bool
 	prepare_is_template bool
+	zero_scan           bool
 }
 
-// host example: locust | locust:2799
-//
+func (o *Conn) Prepare(query string) (ds driver.Stmt, err error) {
+	return o.PrepareContext(context.Background(), query)
+}
+
+func (o *Conn) PrepareContext(ctx context.Context, query string) (ds driver.Stmt, err error) {
+	select {
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	default:
+	}
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		switch query {
+		case Sql_get_type_info:
+		default:
+		}
+		var ns *named_sql
+		if o.prepare_is_template {
+			ns = new_named_sql(query)
+			if ns.err != nil {
+				err = ns.err
+				return
+			}
+			query = ns.sql
+		}
+		var st *Stmt
+		st, err = o.prepare(query)
+		if err != nil {
+			return
+		}
+		st.ns = ns
+		ds = st
+		return
+	}()
+	select {
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	case <-done:
+	}
+	return
+}
+
+// host example: pine | pine:2799
 func new_con(host string, login Login, dsn string) (*Conn, error) {
 	if !strings.Contains(host, ":") {
 		host += ":" + strconv.Itoa(Default_port)
@@ -388,6 +431,83 @@ func (o *Conn) prepare(sql string) (*Stmt, error) {
 	return r, nil
 }
 
+func (o *Conn) Close() error {
+	o.logout(true)
+	return nil
+}
+
+func (o *Conn) Begin() (driver.Tx, error) {
+	return o.BeginTx(context.Background(), driver.TxOptions{})
+}
+
+// msaccess: sql.LevelReadCommitted or sql.LevelDefault (usually none)
+func (o *Conn) BeginTx(ctx context.Context, opts driver.TxOptions) (tx driver.Tx, err error) {
+	select {
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	default:
+	}
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		if opts.ReadOnly {
+			err = fmt.Errorf("ReadOnly transaction is not supported")
+			return
+		}
+		var isolation C.odbULONG
+		switch o.driver {
+		case Msaccess:
+			switch sql.IsolationLevel(opts.Isolation) {
+			case sql.LevelDefault:
+				isolation = C.ODB_TXN_DEFAULT
+			case sql.LevelReadUncommitted:
+				isolation = C.ODB_TXN_READUNCOMMITTED
+			case sql.LevelReadCommitted:
+				isolation = C.ODB_TXN_READCOMMITTED
+			case sql.LevelRepeatableRead:
+				isolation = C.ODB_TXN_REPEATABLEREAD
+			case sql.LevelSerializable:
+				isolation = C.ODB_TXN_SERIALIZABLE
+			default:
+				err = fmt.Errorf("unsupported isolation level: %v", opts.Isolation)
+				return
+			}
+		case Foxpro:
+			err = fmt.Errorf("unsupported isolation level: %v", opts.Isolation)
+			return
+		default:
+			err = fmt.Errorf("unkown odbc driver and isolation level")
+			return
+		}
+		if !dB2b(C.odbSetAttrLong(o.h, C.ODB_ATTR_TRANSACTIONS, isolation)) {
+			err = oe2err(o.h)
+			return
+		}
+		tx = o
+	}()
+	select {
+	case <-ctx.Done():
+		o.logout(true)
+		return nil, ctx.Err()
+	case <-done:
+	}
+	return
+}
+
+func (o *Conn) Commit() (err error) {
+	if !dB2b(C.odbCommit(o.h)) {
+		return oe2err(o.h)
+	}
+	return
+}
+
+func (o *Conn) Rollback() (err error) {
+	if !dB2b(C.odbRollback(o.h)) {
+		return oe2err(o.h)
+	}
+	return
+}
+
 type Stmt struct {
 	con            *Conn
 	h              C.odbHANDLE
@@ -400,7 +520,6 @@ type Stmt struct {
 }
 
 // only one string allowed
-//
 func (o *Stmt) execute(sql ...string) error {
 	o.fetch_err = nil
 	r := false
@@ -417,13 +536,6 @@ func (o *Stmt) execute(sql ...string) error {
 	return nil
 }
 
-func (o *Stmt) fetch_row() error {
-	if dB2b(C.odbFetchRow(o.h)) {
-		return nil
-	}
-	return oe2err(o.h)
-}
-
 func (o *Stmt) free() {
 	if o.h != nil {
 		C.odbDropQry(o.h)
@@ -432,38 +544,6 @@ func (o *Stmt) free() {
 		o.h = nil
 		o.bindp = map[C.odbUSHORT]Data{}
 	}
-}
-
-// Convert a Foxpro Memo string to a map
-
-func S2memo(s string) (r map[string]string) {
-	r = map[string]string{}
-	if 0 < len(s) {
-		for _, kv := range strings.Split(s, "\r") {
-			a := strings.Split(kv, "=")
-			if len(a) == 2 && 0 < len(a[0]) && 0 < len(a[1]) {
-				r[a[0]] = a[1]
-			}
-		}
-	}
-	return
-}
-
-// Convert a map to Foxpro Memo string
-//
-func Memo2s(m map[string]string) string {
-	keys := make([]string, len(m))
-	i := 0
-	for k := range m {
-		keys[i] = k
-		i++
-	}
-	sort.Strings(keys)
-	a := make([]string, 0, len(m))
-	for _, k := range keys {
-		a = append(a, k+"="+m[k])
-	}
-	return strings.Join(a, "\r")
 }
 
 // col: 1 based
@@ -546,43 +626,6 @@ func (o *Stmt) set(col C.odbUSHORT, i interface{}, last C.odbBOOL) (err error) {
 	return
 }
 
-type nchar struct {
-	p (*C.odbCHAR)
-}
-
-func new_s(s string) *nchar {
-	return &nchar{(*C.odbCHAR)(C.CString(s))}
-}
-
-func new_b(b []byte) *nchar {
-	return &nchar{(*C.odbCHAR)(C.CBytes(b))}
-}
-
-func (o *nchar) free() {
-	if o.p != nil {
-		C.free(unsafe.Pointer(o.p))
-		o.p = nil
-	}
-}
-
-func b2B(b bool) C.odbBOOL {
-	if b {
-		return C.odbBOOL(1)
-	}
-	return C.odbBOOL(0)
-}
-
-func dB2b(b C.odbBOOL) bool {
-	if b == 0 {
-		return false
-	}
-	return true
-}
-
-func oe2err(h C.odbHANDLE) error {
-	return errors.New(C.GoString((*C.char)(unsafe.Pointer(C.odbGetErrorText(h)))))
-}
-
 // Driver name
 const Driver_msaccess = "odbtp_msaccess"
 
@@ -608,10 +651,13 @@ type bool_option C.odbLONG
 const (
 	// Example in query: {{.id}} becomes sql.Named("id", <value)
 	Prepare_is_template bool_option = 1 << iota * -1 // ODB_ATTR are positive
-	Cache_procs                     = C.ODB_ATTR_CACHEPROCS
-	Mapchar2wchar                   = C.ODB_ATTR_MAPCHARTOWCHAR
-	Describe_params                 = C.ODB_ATTR_DESCRIBEPARAMS
-	Unicodesql                      = C.ODB_ATTR_UNICODESQL
+
+	// Zero_scan will cause Stmt.Scan() to return go zero values in place of nil for database null
+	Zero_scan
+	Cache_procs     = C.ODB_ATTR_CACHEPROCS
+	Mapchar2wchar   = C.ODB_ATTR_MAPCHARTOWCHAR
+	Describe_params = C.ODB_ATTR_DESCRIBEPARAMS
+	Unicodesql      = C.ODB_ATTR_UNICODESQL
 )
 
 func Bool_opt(opt bool_option, enable bool) option {
@@ -619,6 +665,8 @@ func Bool_opt(opt bool_option, enable bool) option {
 		switch opt {
 		case Prepare_is_template:
 			o.prepare_is_template = enable
+		case Zero_scan:
+			o.zero_scan = enable
 		default:
 			return o.set_attr_bool(opt, enable)
 		}
@@ -648,7 +696,6 @@ type Driver struct {
 }
 
 // dsn is not used. Use Register()
-//
 func (o *Driver) Open(dsn string) (driver.Conn, error) {
 	if 0 < len(dsn) {
 		return nil, fmt.Errorf("use Register")
@@ -669,48 +716,6 @@ func (o *Driver) Open(dsn string) (driver.Conn, error) {
 		}
 	}
 	return con, nil
-}
-func (o *Conn) Prepare(query string) (ds driver.Stmt, err error) {
-	return o.PrepareContext(context.Background(), query)
-}
-
-func (o *Conn) PrepareContext(ctx context.Context, query string) (ds driver.Stmt, err error) {
-	select {
-	case <-ctx.Done():
-		return nil, ctx.Err()
-	default:
-	}
-	done := make(chan struct{})
-	go func() {
-		defer close(done)
-		switch query {
-		case Sql_get_type_info:
-		default:
-		}
-		var ns *named_sql
-		if o.prepare_is_template {
-			ns = new_named_sql(query)
-			if ns.err != nil {
-				err = ns.err
-				return
-			}
-			query = ns.sql
-		}
-		var st *Stmt
-		st, err = o.prepare(query)
-		if err != nil {
-			return
-		}
-		st.ns = ns
-		ds = st
-		return
-	}()
-	select {
-	case <-ctx.Done():
-		return nil, ctx.Err()
-	case <-done:
-	}
-	return
 }
 
 type named_sql struct {
@@ -753,87 +758,6 @@ func new_named_sql(tp_s string) (r *named_sql) {
 	r.err = tp.Execute(&buf, r.uniq)
 	r.sql = buf.String()
 	return
-}
-
-func (o *Conn) Close() error {
-	o.logout(true)
-	return nil
-}
-
-func (o *Conn) Begin() (driver.Tx, error) {
-	return o.BeginTx(context.Background(), driver.TxOptions{})
-}
-
-// msaccess: sql.LevelReadCommitted or sql.LevelDefault (usually none)
-//
-func (o *Conn) BeginTx(ctx context.Context, opts driver.TxOptions) (tx driver.Tx, err error) {
-	select {
-	case <-ctx.Done():
-		return nil, ctx.Err()
-	default:
-	}
-	done := make(chan struct{})
-	go func() {
-		defer close(done)
-		// if err = o.drop(); err != nil {
-		// 	return
-		// }
-		if opts.ReadOnly {
-			err = fmt.Errorf("ReadOnly transaction is not supported")
-			return
-		}
-		var isolation C.odbULONG
-		switch o.driver {
-		case Msaccess:
-			switch sql.IsolationLevel(opts.Isolation) {
-			case sql.LevelDefault:
-				isolation = C.ODB_TXN_DEFAULT
-			case sql.LevelReadUncommitted:
-				isolation = C.ODB_TXN_READUNCOMMITTED
-			case sql.LevelReadCommitted:
-				isolation = C.ODB_TXN_READCOMMITTED
-			case sql.LevelRepeatableRead:
-				isolation = C.ODB_TXN_REPEATABLEREAD
-			case sql.LevelSerializable:
-				isolation = C.ODB_TXN_SERIALIZABLE
-			default:
-				err = fmt.Errorf("unsupported isolation level: %v", opts.Isolation)
-				return
-			}
-		case Foxpro:
-			err = fmt.Errorf("unsupported isolation level: %v", opts.Isolation)
-			return
-		default:
-			err = fmt.Errorf("unkown odbc driver and isolation level")
-			return
-		}
-		if !dB2b(C.odbSetAttrLong(o.h, C.ODB_ATTR_TRANSACTIONS, isolation)) {
-			err = oe2err(o.h)
-			return
-		}
-		tx = o
-	}()
-	select {
-	case <-ctx.Done():
-		o.logout(true)
-		return nil, ctx.Err()
-	case <-done:
-	}
-	return
-}
-
-func (o *Conn) Commit() (err error) {
-	if !dB2b(C.odbCommit(o.h)) {
-		return oe2err(o.h)
-	}
-	return nil
-}
-
-func (o *Conn) Rollback() (err error) {
-	if !dB2b(C.odbRollback(o.h)) {
-		return oe2err(o.h)
-	}
-	return nil
 }
 
 func (o *Stmt) Close() error {
@@ -879,7 +803,6 @@ func (o *Stmt) RowsAffected() (int64, error) {
 }
 
 // RowsAffected() is not implemented by msaccess.
-//
 func (o *Stmt) Exec(args []driver.Value) (dr driver.Result, err error) {
 	return nil, driver.ErrSkip
 }
@@ -892,8 +815,6 @@ type Identity_table string
 
 func (o *Stmt) CheckNamedValue(nv *driver.NamedValue) (err error) {
 	switch t := nv.Value.(type) {
-	case int:
-		nv.Value = int64(t)
 	case Identity_table:
 		o.identity_table = string(t)
 		err = driver.ErrRemoveArgument
@@ -901,12 +822,12 @@ func (o *Stmt) CheckNamedValue(nv *driver.NamedValue) (err error) {
 		o.identity_table = string(*t)
 		err = driver.ErrRemoveArgument
 	default:
+		nv.Value, err = driver.DefaultParameterConverter.ConvertValue(nv.Value)
 	}
 	return
 }
 
-// Must add an Identity_table arg to retrieve the LastInsertId for msaccess
-//
+// msaccess: Must add an Identity_table arg to call LastInsertId()
 func (o *Stmt) ExecContext(ctx context.Context, args []driver.NamedValue) (dr driver.Result, err error) {
 	_, err = o.QueryContext(ctx, args)
 	if err == nil {
@@ -1027,18 +948,23 @@ func (o *Stmt) Columns() (s []string) {
 }
 
 func (o *Stmt) Next(dest []driver.Value) (err error) {
-	if err = o.fetch_row(); err != nil {
-		return err
+	if !dB2b(C.odbFetchRow(o.h)) {
+		return oe2err(o.h)
 	}
 	if dB2b(C.odbNoData(o.h)) {
 		err = io.EOF
 		return
 	}
-	var col C.odbUSHORT
+	col := C.odbUSHORT(0)
+	is_nil := false
 	for i := range dest {
 		col++
+		is_nil = false
 		byte_len := int32(C.odbColDataLen(o.h, col))
 		if byte_len == C.ODB_NULL {
+			is_nil = true
+		}
+		if is_nil && !o.con.zero_scan {
 			dest[i] = nil
 			continue
 		}
@@ -1048,30 +974,54 @@ func (o *Stmt) Next(dest []driver.Value) (err error) {
 		}
 		switch dt {
 		case Char, Wchar:
-			dest[i] = C.GoBytes(unsafe.Pointer(C.odbColDataText(o.h, col)), (C.int)(byte_len))
+			if is_nil && o.con.zero_scan {
+				dest[i] = []byte{}
+			} else {
+				dest[i] = C.GoBytes(unsafe.Pointer(C.odbColDataText(o.h, col)), (C.int)(byte_len))
+			}
 		case Int:
-			dest[i] = int64(C.odbColDataLong(o.h, col))
+			if is_nil && o.con.zero_scan {
+				dest[i] = int64(0)
+			} else {
+				dest[i] = int64(C.odbColDataLong(o.h, col))
+			}
 		case Bigint:
-			dest[i] = int64(C.odbColDataLongLong(o.h, col))
+			if is_nil && o.con.zero_scan {
+				dest[i] = int64(0)
+			} else {
+				dest[i] = int64(C.odbColDataLongLong(o.h, col))
+			}
 		case Datetime:
-			ts := C.odbColDataTimestamp(o.h, col)
-			dest[i] = time.Date(
-				int(ts.sYear),
-				time.Month(ts.usMonth),
-				int(ts.usDay),
-				int(ts.usHour),
-				int(ts.usMinute),
-				int(ts.usSecond),
-				int(ts.ulFraction),
-				time.Local,
-			)
+			if is_nil && o.con.zero_scan {
+				dest[i] = time.Time{}
+			} else {
+				ts := C.odbColDataTimestamp(o.h, col)
+				dest[i] = time.Date(
+					int(ts.sYear),
+					time.Month(ts.usMonth),
+					int(ts.usDay),
+					int(ts.usHour),
+					int(ts.usMinute),
+					int(ts.usSecond),
+					int(ts.ulFraction),
+					time.Local,
+				)
+			}
 		case Double:
-			dest[i] = float64(C.odbColDataDouble(o.h, col))
+			if is_nil && o.con.zero_scan {
+				dest[i] = float64(0)
+			} else {
+				dest[i] = float64(C.odbColDataDouble(o.h, col))
+			}
 		case Bit:
-			if C.odbColDataByte(o.h, col) == 0 {
+			if is_nil && o.con.zero_scan {
 				dest[i] = false
 			} else {
-				dest[i] = true
+				if C.odbColDataByte(o.h, col) == 0 {
+					dest[i] = false
+				} else {
+					dest[i] = true
+				}
 			}
 		case Smallint:
 			dest[i] = int64(C.odbColDataShort(o.h, col))
@@ -1079,5 +1029,72 @@ func (o *Stmt) Next(dest []driver.Value) (err error) {
 			return fmt.Errorf("invalid type: column: %v, %v", i+1, dt)
 		}
 	}
-	return nil
+	return
+}
+
+// Convert a Foxpro Memo string to a map
+func S2memo(s string) (r map[string]string) {
+	r = map[string]string{}
+	if 0 < len(s) {
+		for _, kv := range strings.Split(s, "\r") {
+			a := strings.Split(kv, "=")
+			if len(a) == 2 && 0 < len(a[0]) && 0 < len(a[1]) {
+				r[a[0]] = a[1]
+			}
+		}
+	}
+	return
+}
+
+// Convert a map to Foxpro Memo string
+func Memo2s(m map[string]string) string {
+	keys := make([]string, len(m))
+	i := 0
+	for k := range m {
+		keys[i] = k
+		i++
+	}
+	sort.Strings(keys)
+	a := make([]string, 0, len(m))
+	for _, k := range keys {
+		a = append(a, k+"="+m[k])
+	}
+	return strings.Join(a, "\r")
+}
+
+type nchar struct {
+	p (*C.odbCHAR)
+}
+
+func new_s(s string) *nchar {
+	return &nchar{(*C.odbCHAR)(C.CString(s))}
+}
+
+func new_b(b []byte) *nchar {
+	return &nchar{(*C.odbCHAR)(C.CBytes(b))}
+}
+
+func (o *nchar) free() {
+	if o.p != nil {
+		C.free(unsafe.Pointer(o.p))
+		o.p = nil
+	}
+}
+
+func b2B(b bool) C.odbBOOL {
+	if b {
+		return C.odbBOOL(1)
+	}
+	return C.odbBOOL(0)
+}
+
+func dB2b(b C.odbBOOL) bool {
+	if b == 0 {
+		return false
+	}
+	return true
+}
+
+func oe2err(h C.odbHANDLE) error {
+	return errors.New(C.GoString((*C.char)(unsafe.Pointer(C.odbGetErrorText(h)))))
 }
