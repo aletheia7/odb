@@ -19,7 +19,6 @@ import (
 	"fmt"
 	"io"
 	"net"
-	"sort"
 	"strconv"
 	"strings"
 	"sync/atomic"
@@ -34,8 +33,12 @@ type driver_odbc string
 const (
 	Default_port = 2799
 
+	// Queries with this prefix will be executed and not prepared
+	// The prefix is removed
+	Execute_prefix = `odbexecute`
+
 	// Special odbtp query. Use in QueryContext().
-	Sql_get_type_info = "||SQLGetTypeInfo"
+	Sql_get_type_info = Execute_prefix + "||SQLGetTypeInfo"
 )
 
 type Login C.odbUSHORT
@@ -49,12 +52,15 @@ const (
 type Conn struct {
 	driver              driver_odbc
 	h                   C.odbHANDLE
-	stmts               map[*Stmt]bool
 	prepare_is_template bool
 	zero_scan           bool
+	debug               io.Writer
 }
 
 func (o *Conn) Prepare(query string) (ds driver.Stmt, err error) {
+	if o.debug != nil {
+		fmt.Fprintln(o.debug, "Conn.Prepare")
+	}
 	return o.PrepareContext(context.Background(), query)
 }
 
@@ -67,22 +73,15 @@ func (o *Conn) PrepareContext(ctx context.Context, query string) (ds driver.Stmt
 	done := make(chan struct{})
 	go func() {
 		defer close(done)
-		var ns *named_sql
-		if o.prepare_is_template {
-			ns = new_named_sql(query)
-			if ns.err != nil {
-				err = ns.err
-				return
-			}
-			query = ns.sql
-		}
 		var st *Stmt
 		st, err = o.prepare(query)
 		if err != nil {
 			return
 		}
-		st.ns = ns
 		ds = st
+		if o.debug != nil {
+			fmt.Fprintf(o.debug, "Conn.PrepareContext %p -> %p\n", o, st)
+		}
 		return
 	}()
 	select {
@@ -94,6 +93,9 @@ func (o *Conn) PrepareContext(ctx context.Context, query string) (ds driver.Stmt
 }
 
 func (o *Conn) Ping(ctx context.Context) (err error) {
+	if o.debug != nil {
+		fmt.Fprintln(o.debug, "Conn.Ping")
+	}
 	select {
 	case <-ctx.Done():
 		return ctx.Err()
@@ -116,6 +118,9 @@ func (o *Conn) Ping(ctx context.Context) (err error) {
 }
 
 func (o *Conn) Close() error {
+	if o.debug != nil {
+		fmt.Fprintf(o.debug, "Conn.Close %p\n", o)
+	}
 	o.logout(true)
 	return nil
 }
@@ -126,6 +131,9 @@ func (o *Conn) Begin() (driver.Tx, error) {
 
 // msaccess: sql.LevelReadCommitted or sql.LevelDefault (usually none)
 func (o *Conn) BeginTx(ctx context.Context, opts driver.TxOptions) (tx driver.Tx, err error) {
+	if o.debug != nil {
+		fmt.Fprintln(o.debug, "Conn.BeginTx")
+	}
 	select {
 	case <-ctx.Done():
 		return nil, ctx.Err()
@@ -179,6 +187,9 @@ func (o *Conn) BeginTx(ctx context.Context, opts driver.TxOptions) (tx driver.Tx
 }
 
 func (o *Conn) Commit() (err error) {
+	if o.debug != nil {
+		fmt.Fprintf(o.debug, "Conn.Commit %p\n", o)
+	}
 	if !dB2b(C.odbCommit(o.h)) {
 		return oe2err(o.h)
 	}
@@ -186,8 +197,78 @@ func (o *Conn) Commit() (err error) {
 }
 
 func (o *Conn) Rollback() (err error) {
+	if o.debug != nil {
+		fmt.Fprintf(o.debug, "Conn.Rollback %p\n", o)
+	}
 	if !dB2b(C.odbRollback(o.h)) {
 		return oe2err(o.h)
+	}
+	return
+}
+
+func (o *Conn) Exec(args []driver.Value) (dr driver.Result, err error) {
+	return nil, driver.ErrSkip
+}
+
+func (o *Conn) Query(args []driver.Value) (dr driver.Rows, err error) {
+	return nil, driver.ErrSkip
+}
+
+// msaccess: Must add an Identity_table arg to call LastInsertId()
+func (o *Conn) ExecContext(ctx context.Context, query string, args []driver.NamedValue) (dr driver.Result, err error) {
+	if o.debug != nil {
+		fmt.Fprintf(o.debug, "Conn.ExecContext $p\n", o)
+	}
+	select {
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	default:
+	}
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		var st *Stmt
+		st, err = o.prepare(query)
+		if err != nil {
+			return
+		}
+		_, err = st.QueryContext(ctx, args)
+		if err != nil {
+			return
+		}
+		dr = st
+	}()
+	select {
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	case <-done:
+	}
+	return
+}
+
+func (o *Conn) QueryContext(ctx context.Context, query string, args []driver.NamedValue) (dr driver.Rows, err error) {
+	if o.debug != nil {
+		fmt.Fprintf(o.debug, "Conn.QueryContext %p %v\n", o, query)
+	}
+	select {
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	default:
+	}
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		var st *Stmt
+		st, err = o.prepare(query)
+		if err != nil {
+			return
+		}
+		dr, err = st.QueryContext(ctx, args)
+	}()
+	select {
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	case <-done:
 	}
 	return
 }
@@ -201,9 +282,7 @@ func new_con(host string, login Login, dsn string) (*Conn, error) {
 	if err != nil {
 		return nil, err
 	}
-	r := &Conn{
-		stmts: map[*Stmt]bool{},
-	}
+	r := &Conn{}
 	switch {
 	case strings.HasPrefix(dsn, string(msaccess)):
 		r.driver = msaccess
@@ -272,60 +351,43 @@ func (o *Conn) logout(disconnect bool) {
 	}
 }
 
-func (o *Conn) drop() (err error) {
-	for q := range o.stmts {
-		if !dB2b(C.odbDropQry(q.h)) {
-			return oe2err(q.h)
-		}
-	}
-	o.stmts = map[*Stmt]bool{}
-	return
-}
-
-func (o *Conn) free() {
-	if o.h != nil {
-		C.odbFree(o.h)
-		o.h = nil
-	}
-	o.stmts = map[*Stmt]bool{}
-}
-
-func (o *Conn) allocate_query() *Stmt {
+func (o *Conn) prepare(query string) (st *Stmt, err error) {
 	r := &Stmt{
-		con: o,
-		h:   C.odbAllocate(o.h),
-	}
-	if r.h == nil {
-		r = nil
-	}
-	if r != nil {
-		o.stmts[r] = true
-	}
-	return r
-}
-
-func (o *Conn) prepare(sql string) (*Stmt, error) {
-	r := &Stmt{
-		con:   o,
-		h:     C.odbAllocate(o.h),
-		bindp: map[C.odbUSHORT]data{},
+		con:      o,
+		h:        C.odbAllocate(o.h),
+		bindp:    map[C.odbUSHORT]data{},
+		prepared: true,
 	}
 	if r.h == nil {
 		return nil, fmt.Errorf("odbAllocate failed")
 	}
-	switch sql {
-	case Sql_get_type_info:
-		r.special = sql
-	default:
-		s := new_s(sql)
-		defer s.free()
-		if !dB2b(C.odbPrepare(r.h, s.p)) {
-			err := oe2err(r.h)
-			C.odbFree(r.h)
-			return nil, err
+	if strings.HasPrefix(query, Execute_prefix) {
+		r.prepared = false
+		r.ns = new_named_sql(query[len(Execute_prefix):])
+		if r.ns.err != nil {
+			err = r.ns.err
+			r.Close()
+			return
 		}
+		st = r
+		return
 	}
-	o.stmts[r] = true
+	if o.prepare_is_template {
+		r.ns = new_named_sql(query)
+		if r.ns.err != nil {
+			err = r.ns.err
+			r.Close()
+			return
+		}
+		query = r.ns.sql
+	}
+	s := new_s(query)
+	defer s.free()
+	if !dB2b(C.odbPrepare(r.h, s.p)) {
+		err := oe2err(r.h)
+		r.Close()
+		return nil, err
+	}
 	return r, nil
 }
 
@@ -334,22 +396,20 @@ type Stmt struct {
 	h              C.odbHANDLE
 	bindp          map[C.odbUSHORT]data
 	fetch_err      error
-	bound          bool
 	ns             *named_sql
-	special        string
+	prepared       bool
 	identity_table string // only msaccess
 }
 
-// only one string allowed
-func (o *Stmt) execute(sql ...string) error {
+func (o *Stmt) execute() error {
 	o.fetch_err = nil
 	r := false
-	if sql != nil && 0 < len(sql) {
-		s := new_s(sql[0])
+	if o.prepared {
+		r = dB2b(C.odbExecute(o.h, C.odbPCSTR(nil)))
+	} else {
+		s := new_s(o.ns.sql)
 		defer s.free()
 		r = dB2b(C.odbExecute(o.h, s.p))
-	} else {
-		r = dB2b(C.odbExecute(o.h, C.odbPCSTR(nil)))
 	}
 	if !r {
 		return oe2err(o.h)
@@ -357,18 +417,8 @@ func (o *Stmt) execute(sql ...string) error {
 	return nil
 }
 
-func (o *Stmt) free() {
-	if o.h != nil {
-		C.odbDropQry(o.h)
-		C.odbFree(o.h)
-		delete(o.con.stmts, o)
-		o.h = nil
-		o.bindp = map[C.odbUSHORT]data{}
-	}
-}
-
 // col: 1 based
-func (o *Stmt) bind(col C.odbUSHORT, data data, last C.odbBOOL) (err error) {
+func (o *Stmt) bind(col C.odbUSHORT, data data) (err error) {
 	desc := odb2sql[o.con.driver][data]
 	if !dB2b(C.odbBindParamEx(
 		o.h,
@@ -379,7 +429,7 @@ func (o *Stmt) bind(col C.odbUSHORT, data data, last C.odbBOOL) (err error) {
 		desc.sql_type,
 		desc.col_size,
 		desc.dec_digits,
-		last,
+		0,
 	)) {
 		return oe2err(o.h)
 	}
@@ -387,22 +437,62 @@ func (o *Stmt) bind(col C.odbUSHORT, data data, last C.odbBOOL) (err error) {
 }
 
 // col: 1 based
-func (o *Stmt) set(col C.odbUSHORT, i interface{}, last C.odbBOOL) (err error) {
+func (o *Stmt) set(col C.odbUSHORT, i interface{}) (err error) {
 	switch v := i.(type) {
+	case *[]byte:
+		if v == nil {
+			if !dB2b(C.odbSetParamNull(o.h, col, 0)) {
+				return oe2err(o.h)
+			}
+		} else {
+			s := new_b(*v)
+			defer s.free()
+			if !dB2b(C.odbSetParam(o.h, col, (C.odbPVOID)(s.p), C.odbLONG(len(*v)), 0)) {
+				return oe2err(o.h)
+			}
+		}
 	case []byte:
 		s := new_b(v)
-		if !dB2b(C.odbSetParam(o.h, col, (C.odbPVOID)(s.p), C.odbLONG(len(v)), last)) {
-			s.free()
+		defer s.free()
+		if !dB2b(C.odbSetParam(o.h, col, (C.odbPVOID)(s.p), C.odbLONG(len(v)), 0)) {
 			return oe2err(o.h)
 		}
-		s.free()
+	case *string:
+		if v == nil {
+			if !dB2b(C.odbSetParamNull(o.h, col, 0)) {
+				return oe2err(o.h)
+			}
+		} else {
+			s := new_s(*v)
+			defer s.free()
+			if !dB2b(C.odbSetParam(o.h, col, (C.odbPVOID)(s.p), C.odbLONG(len(*v)), 0)) {
+				return oe2err(o.h)
+			}
+		}
 	case string:
 		s := new_s(v)
-		if !dB2b(C.odbSetParam(o.h, col, (C.odbPVOID)(s.p), C.odbLONG(len(v)), last)) {
-			s.free()
+		defer s.free()
+		if !dB2b(C.odbSetParam(o.h, col, (C.odbPVOID)(s.p), C.odbLONG(len(v)), 0)) {
 			return oe2err(o.h)
 		}
-		s.free()
+	case *time.Time:
+		if v == nil {
+			if !dB2b(C.odbSetParamNull(o.h, col, 0)) {
+				return oe2err(o.h)
+			}
+		} else {
+			var ts C.odbTIMESTAMP
+			ts.sYear = C.odbSHORT(v.Year())
+			ts.usMonth = C.odbUSHORT(v.Month())
+			ts.usDay = C.odbUSHORT(v.Day())
+			ts.usHour = C.odbUSHORT(v.Hour())
+			ts.usMinute = C.odbUSHORT(v.Minute())
+			ts.usSecond = C.odbUSHORT(v.Second())
+			ts.ulFraction = C.odbULONG(v.Nanosecond())
+			if !dB2b(C.odbSetParamTimestamp(o.h, col, &ts, 0)) {
+				return oe2err(o.h)
+			}
+		}
 	case time.Time:
 		var ts C.odbTIMESTAMP
 		ts.sYear = C.odbSHORT(v.Year())
@@ -412,39 +502,90 @@ func (o *Stmt) set(col C.odbUSHORT, i interface{}, last C.odbBOOL) (err error) {
 		ts.usMinute = C.odbUSHORT(v.Minute())
 		ts.usSecond = C.odbUSHORT(v.Second())
 		ts.ulFraction = C.odbULONG(v.Nanosecond())
-		if !dB2b(C.odbSetParamTimestamp(o.h, col, &ts, last)) {
+		if !dB2b(C.odbSetParamTimestamp(o.h, col, &ts, 0)) {
 			return oe2err(o.h)
 		}
 	case nil:
-		if !dB2b(C.odbSetParamNull(o.h, col, last)) {
+		if !dB2b(C.odbSetParamNull(o.h, col, 0)) {
 			return oe2err(o.h)
 		}
-	case int64:
-		if o.con.driver == msaccess {
-			if !dB2b(C.odbSetParamDouble(o.h, col, C.odbDOUBLE(float64(v)), last)) {
+	case *int64:
+		if v == nil {
+			if !dB2b(C.odbSetParamNull(o.h, col, 0)) {
 				return oe2err(o.h)
 			}
 		} else {
-			if !dB2b(C.odbSetParamLongLong(o.h, col, C.odbULONGLONG(v), last)) {
+			if o.con.driver == msaccess {
+				if !dB2b(C.odbSetParamDouble(o.h, col, C.odbDOUBLE(float64(*v)), 0)) {
+					return oe2err(o.h)
+				}
+			} else {
+				if !dB2b(C.odbSetParamLongLong(o.h, col, C.odbULONGLONG(*v), 0)) {
+					return oe2err(o.h)
+				}
+			}
+		}
+	case int64:
+		if o.con.driver == msaccess {
+			if !dB2b(C.odbSetParamDouble(o.h, col, C.odbDOUBLE(float64(v)), 0)) {
+				return oe2err(o.h)
+			}
+		} else {
+			if !dB2b(C.odbSetParamLongLong(o.h, col, C.odbULONGLONG(v), 0)) {
+				return oe2err(o.h)
+			}
+		}
+	case *float64:
+		if v == nil {
+			if !dB2b(C.odbSetParamNull(o.h, col, 0)) {
+				return oe2err(o.h)
+			}
+		} else {
+			if !dB2b(C.odbSetParamDouble(o.h, col, C.odbDOUBLE(*v), 0)) {
 				return oe2err(o.h)
 			}
 		}
 	case float64:
-		if !dB2b(C.odbSetParamDouble(o.h, col, C.odbDOUBLE(v), last)) {
+		if !dB2b(C.odbSetParamDouble(o.h, col, C.odbDOUBLE(v), 0)) {
 			return oe2err(o.h)
+		}
+	case *bool:
+		if v == nil {
+			if !dB2b(C.odbSetParamNull(o.h, col, 0)) {
+				return oe2err(o.h)
+			}
+		} else {
+			var b C.odbBYTE
+			if *v == true {
+				b = C.odbBYTE(1)
+			}
+			if !dB2b(C.odbSetParamByte(o.h, col, b, 0)) {
+				return oe2err(o.h)
+			}
 		}
 	case bool:
 		var b C.odbBYTE
 		if v == true {
 			b = C.odbBYTE(1)
 		}
-		if !dB2b(C.odbSetParamByte(o.h, col, b, last)) {
+		if !dB2b(C.odbSetParamByte(o.h, col, b, 0)) {
 			return oe2err(o.h)
 		}
 	default:
 		return fmt.Errorf("invalid type: parama: %v, %T", col, v)
 	}
 	return
+}
+
+type Rows struct {
+	*Stmt
+}
+
+func (o *Rows) Close() error {
+	if o.con.debug != nil {
+		fmt.Fprintf(o.con.debug, "Rows.Close %p\n", o.Stmt)
+	}
+	return nil
 }
 
 // Driver name
@@ -498,6 +639,13 @@ func Bool_opt(opt bool_option, enable bool) option {
 	}
 }
 
+func Debug(w io.Writer) option {
+	return func(o *Conn) error {
+		o.debug = w
+		return nil
+	}
+}
+
 type int_option C.odbLONG
 
 const (
@@ -538,6 +686,9 @@ func (o *Driver) Open(dsn string) (driver.Conn, error) {
 				return nil, err
 			}
 		}
+	}
+	if con.debug != nil {
+		fmt.Fprintf(con.debug, "Driver.Open %p\n", con)
 	}
 	return con, nil
 }
@@ -585,6 +736,15 @@ func new_named_sql(tp_s string) (r *named_sql) {
 }
 
 func (o *Stmt) Close() error {
+	if o.con.debug != nil {
+		fmt.Fprintf(o.con.debug, "Stmt.Close %p\n", o)
+	}
+	if o.h != nil {
+		C.odbDropQry(o.h)
+		C.odbFree(o.h)
+		o.h = nil
+		o.bindp = map[C.odbUSHORT]data{}
+	}
 	return nil
 }
 
@@ -607,7 +767,7 @@ func (o *Stmt) LastInsertId() (id int64, err error) {
 	if err != nil {
 		return
 	}
-	defer st.free()
+	defer st.Close()
 	if err = st.execute(); err != nil {
 		return
 	}
@@ -641,6 +801,7 @@ type Identity_table string
 
 func (o *Stmt) CheckNamedValue(nv *driver.NamedValue) (err error) {
 	switch t := nv.Value.(type) {
+	case *int64, *float64, *bool, *[]byte, *string, *time.Time: // These are used for nil
 	case Identity_table:
 		o.identity_table = string(t)
 		err = driver.ErrRemoveArgument
@@ -665,8 +826,28 @@ func (o *Stmt) CheckNamedValue(nv *driver.NamedValue) (err error) {
 	return
 }
 
+var (
+	// string or []byte input parameter to be set to database null
+	Ns *string
+
+	// int64 input parameter to be set to database null
+	Ni *int64
+
+	// float64 input parameter to be set to database null
+	Nf *float64
+
+	// bool input parameter to be set to database null
+	Nb *bool
+
+	// time.Time input parameter to be set to database null
+	Nt *time.Time
+)
+
 // msaccess: Must add an Identity_table arg to call LastInsertId()
 func (o *Stmt) ExecContext(ctx context.Context, args []driver.NamedValue) (dr driver.Result, err error) {
+	if o.con.debug != nil {
+		fmt.Fprintln(o.con.debug, "Stmt.ExecContext")
+	}
 	_, err = o.QueryContext(ctx, args)
 	if err == nil {
 		dr = o
@@ -675,6 +856,9 @@ func (o *Stmt) ExecContext(ctx context.Context, args []driver.NamedValue) (dr dr
 }
 
 func (o *Stmt) QueryContext(ctx context.Context, args []driver.NamedValue) (dr driver.Rows, err error) {
+	if o.con.debug != nil {
+		fmt.Fprintf(o.con.debug, "Stmt.QueryContext %p\n", o)
+	}
 	select {
 	case <-ctx.Done():
 		return nil, ctx.Err()
@@ -684,54 +868,51 @@ func (o *Stmt) QueryContext(ctx context.Context, args []driver.NamedValue) (dr d
 	go func() {
 		defer close(done)
 		var col C.odbUSHORT
-		var last C.odbBOOL
-		o.bound = false
-		if !o.bound {
-			o.bound = true
-			if o.ns != nil && 0 < len(o.ns.uniq) {
-				args, err = o.named2pos(args)
-				if err != nil {
-					return
-				}
-			}
-			for i, na := range args {
-				col++
-				if (i + 1) == len(args) {
-					last = 1
-				}
-				switch t := na.Value.(type) {
-				case []byte, string:
-					err = o.bind(col, owchar, last)
-				case int64:
-					err = o.bind(col, obigint, last)
-				case time.Time:
-					err = o.bind(col, odatetime, last)
-				case bool:
-					err = o.bind(col, obit, last)
-				case float64:
-					err = o.bind(col, odouble, last)
-				default:
-					err = fmt.Errorf("type unsupported: %T", t)
-				}
-				if err != nil {
-					return
-				}
-			}
-		}
-		col = 0
-		for i, v := range args {
-			col++
-			if (i + 1) == len(args) {
-				last = 1
-			}
-			if err = o.set(col, v.Value, last); err != nil {
+		if o.ns != nil && 0 < len(o.ns.uniq) {
+			args, err = o.named2pos(args)
+			if err != nil {
 				return
 			}
 		}
-		if err = o.execute(o.special); err != nil {
+		for _, na := range args {
+			col++
+			switch t := na.Value.(type) {
+			case string, *string, []byte, *[]byte:
+				err = o.bind(col, owchar)
+			case int64, *int64:
+				err = o.bind(col, obigint)
+			case time.Time, *time.Time:
+				err = o.bind(col, odatetime)
+			case bool, *bool:
+				err = o.bind(col, obit)
+			case float64, *float64:
+				err = o.bind(col, odouble)
+			default:
+				err = fmt.Errorf("type unsupported: %T", t)
+			}
+			if err != nil {
+				return
+			}
+		}
+		if 0 < col && !dB2b(C.odbFinalizeRequest(o.h)) {
+			err = oe2err(o.h)
 			return
 		}
-		dr = o
+		col = 0
+		for _, v := range args {
+			col++
+			if err = o.set(col, v.Value); err != nil {
+				return
+			}
+		}
+		if 0 < col && !dB2b(C.odbFinalizeRequest(o.h)) {
+			err = oe2err(o.h)
+			return
+		}
+		if err = o.execute(); err != nil {
+			return
+		}
+		dr = &Rows{o}
 		return
 	}()
 	select {
@@ -867,34 +1048,34 @@ func (o *Stmt) Next(dest []driver.Value) (err error) {
 }
 
 // Convert a Foxpro Memo string to a map
-func S2memo(s string) (r map[string]string) {
-	r = map[string]string{}
-	if 0 < len(s) {
-		for _, kv := range strings.Split(s, "\r") {
-			a := strings.Split(kv, "=")
-			if len(a) == 2 && 0 < len(a[0]) && 0 < len(a[1]) {
-				r[a[0]] = a[1]
-			}
-		}
-	}
-	return
-}
+// func S2memo(s string) (r map[string]string) {
+// 	r = map[string]string{}
+// 	if 0 < len(s) {
+// 		for _, kv := range strings.Split(s, "\r") {
+// 			a := strings.Split(kv, "=")
+// 			if len(a) == 2 && 0 < len(a[0]) && 0 < len(a[1]) {
+// 				r[a[0]] = a[1]
+// 			}
+// 		}
+// 	}
+// 	return
+// }
 
 // Convert a map to Foxpro Memo string
-func Memo2s(m map[string]string) string {
-	keys := make([]string, len(m))
-	i := 0
-	for k := range m {
-		keys[i] = k
-		i++
-	}
-	sort.Strings(keys)
-	a := make([]string, 0, len(m))
-	for _, k := range keys {
-		a = append(a, k+"="+m[k])
-	}
-	return strings.Join(a, "\r")
-}
+// func Memo2s(m map[string]string) string {
+// 	keys := make([]string, len(m))
+// 	i := 0
+// 	for k := range m {
+// 		keys[i] = k
+// 		i++
+// 	}
+// 	sort.Strings(keys)
+// 	a := make([]string, 0, len(m))
+// 	for _, k := range keys {
+// 		a = append(a, k+"="+m[k])
+// 	}
+// 	return strings.Join(a, "\r")
+// }
 
 type nchar struct {
 	p (*C.odbCHAR)
@@ -992,7 +1173,7 @@ const (
 	// Time           = C.ODB_TIME      // 92
 )
 
-// Used with SSq Sql_get_type_info query DATA_TYPE column
+// Used with Sql_get_type_info query DATA_TYPE column
 func Get_sql_type(i int16) string {
 	return sql_type(i).String()
 }
