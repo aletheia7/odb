@@ -38,7 +38,10 @@ const (
 	Execute_prefix = `odbexecute`
 
 	// Special odbtp query. Use in QueryContext().
+	// https://docs.microsoft.com/en-us/sql/odbc/reference/develop-app/catalog-functions-in-odbc
 	Sql_get_type_info = Execute_prefix + "||SQLGetTypeInfo"
+	Sql_tables        = Execute_prefix + "||SQLTables|||"
+	Sql_columns       = Execute_prefix + "||SQLColumns|||" // must append "<table>", and optional "|column"
 )
 
 type Login C.odbUSHORT
@@ -737,7 +740,7 @@ func new_named_sql(tp_s string) (r *named_sql) {
 
 func (o *Stmt) Close() error {
 	if o.con.debug != nil {
-		fmt.Fprintf(o.con.debug, "Stmt.Close %p\n", o)
+		fmt.Fprintf(o.con.debug, "Stmt.Close %p -> %p\n", o.con, o)
 	}
 	if o.h != nil {
 		C.odbDropQry(o.h)
@@ -846,7 +849,7 @@ var (
 // msaccess: Must add an Identity_table arg to call LastInsertId()
 func (o *Stmt) ExecContext(ctx context.Context, args []driver.NamedValue) (dr driver.Result, err error) {
 	if o.con.debug != nil {
-		fmt.Fprintln(o.con.debug, "Stmt.ExecContext")
+		fmt.Fprintf(o.con.debug, "Stmt.ExecContext %p\n", o)
 	}
 	_, err = o.QueryContext(ctx, args)
 	if err == nil {
@@ -888,7 +891,7 @@ func (o *Stmt) QueryContext(ctx context.Context, args []driver.NamedValue) (dr d
 			case float64, *float64:
 				err = o.bind(col, odouble)
 			default:
-				err = fmt.Errorf("type unsupported: %T", t)
+				err = fmt.Errorf("type unsupported: %T %v %v %v", t, na.Ordinal, na.Name, na.Value)
 			}
 			if err != nil {
 				return
@@ -985,7 +988,7 @@ func (o *Stmt) Next(dest []driver.Value) (err error) {
 		}
 		dt := data(C.odbColDataType(o.h, col))
 		if _, ok := odb2sql[o.con.driver][dt]; !ok {
-			return fmt.Errorf("unknown Data type: %v", dt)
+			return fmt.Errorf("unknown Data type: %v, col: %v", dt, col)
 		}
 		switch dt {
 		case ochar, owchar:
@@ -1027,6 +1030,12 @@ func (o *Stmt) Next(dest []driver.Value) (err error) {
 				dest[i] = float64(0)
 			} else {
 				dest[i] = float64(C.odbColDataDouble(o.h, col))
+			}
+		case oreal:
+			if is_nil && o.con.zero_scan {
+				dest[i] = float64(0)
+			} else {
+				dest[i] = float64(C.odbColDataFloat(o.h, col))
 			}
 		case obit:
 			if is_nil && o.con.zero_scan {
@@ -1121,7 +1130,7 @@ func (o data) String() string {
 	if ok {
 		return s
 	}
-	return fmt.Sprintf("invalid ODB data type: %v", o)
+	return fmt.Sprintf("invalid ODB data type: %d", o)
 }
 
 var data2s = map[data]string{
@@ -1133,6 +1142,7 @@ var data2s = map[data]string{
 	obit:      "Bit",
 	ochar:     "Char",
 	odouble:   "Double",
+	oreal:     "Real",
 	odatetime: "Datetime",
 	// Guid:      "Guid",
 	// Usmallint: "Usmallint",
@@ -1159,6 +1169,7 @@ const (
 	obigint        = C.ODB_BIGINT   // (-25)
 	obit           = C.ODB_BIT      // (-7)
 	ochar          = C.ODB_CHAR     // 1
+	oreal          = C.ODB_REAL     // 7
 	odouble        = C.ODB_DOUBLE   // 8 same as C.ODB_FLOAT
 	odatetime      = C.ODB_DATETIME // 93
 	// Guid           = C.ODB_GUID      // (-11)
@@ -1168,7 +1179,6 @@ const (
 	// Ubigint        = C.ODB_UBIGINT   // (-27)
 	// Utinyint       = C.ODB_UTINYINT  // (-28)
 	// Numeric        = C.ODB_NUMERIC   // 2
-	// Real           = C.ODB_REAL      // 7
 	// Date           = C.ODB_DATE      // 91
 	// Time           = C.ODB_TIME      // 92
 )
@@ -1280,6 +1290,7 @@ var odb2sql = map[driver_odbc]map[data]desc{
 		obit:      desc{C.SQL_BIT, 1, 0},
 		ochar:     desc{C.SQL_CHAR, 255, 0},
 		odouble:   desc{C.SQL_DOUBLE, 53, 0},
+		oreal:     desc{C.SQL_REAL, 24, 0},
 		odatetime: desc{C.SQL_DATETIME, 23, 3},
 	},
 	// Foxpro: { // https://msdn.microsoft.com/en-us/library/z3y7feks(v=vs.80).aspx TYPE()
