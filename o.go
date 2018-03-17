@@ -58,6 +58,7 @@ type Conn struct {
 	prepare_is_template bool
 	zero_scan           bool
 	debug               io.Writer
+	identity_table      string
 }
 
 func (o *Conn) Prepare(query string) (ds driver.Stmt, err error) {
@@ -217,6 +218,33 @@ func (o *Conn) Query(args []driver.Value) (dr driver.Rows, err error) {
 	return nil, driver.ErrSkip
 }
 
+func (o *Conn) CheckNamedValue(nv *driver.NamedValue) (err error) {
+	switch t := nv.Value.(type) {
+	case *int64, *float64, *bool, *[]byte, *string, *time.Time: // These are used for nil
+	case Identity_table:
+		o.identity_table = string(t)
+		err = driver.ErrRemoveArgument
+	case *Identity_table:
+		o.identity_table = string(*t)
+		err = driver.ErrRemoveArgument
+	case int:
+		if o.driver == msaccess {
+			nv.Value = float64(t) // msaccess does not have long/int64
+		} else {
+			nv.Value, err = driver.DefaultParameterConverter.ConvertValue(nv.Value)
+		}
+	case int64:
+		if o.driver == msaccess {
+			nv.Value = float64(t) // msaccess does not have long/int64
+		} else {
+			nv.Value, err = driver.DefaultParameterConverter.ConvertValue(nv.Value)
+		}
+	default:
+		nv.Value, err = driver.DefaultParameterConverter.ConvertValue(nv.Value)
+	}
+	return
+}
+
 // msaccess: Must add an Identity_table arg to call LastInsertId()
 func (o *Conn) ExecContext(ctx context.Context, query string, args []driver.NamedValue) (dr driver.Result, err error) {
 	if o.debug != nil {
@@ -235,6 +263,7 @@ func (o *Conn) ExecContext(ctx context.Context, query string, args []driver.Name
 		if err != nil {
 			return
 		}
+		st.identity_table = o.identity_table
 		_, err = st.QueryContext(ctx, args)
 		if err != nil {
 			return
@@ -266,6 +295,7 @@ func (o *Conn) QueryContext(ctx context.Context, query string, args []driver.Nam
 		if err != nil {
 			return
 		}
+		st.identity_table = o.identity_table
 		dr, err = st.QueryContext(ctx, args)
 	}()
 	select {
