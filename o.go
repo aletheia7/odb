@@ -248,7 +248,7 @@ func (o *Conn) CheckNamedValue(nv *driver.NamedValue) (err error) {
 // msaccess: Must add an Identity_table arg to call LastInsertId()
 func (o *Conn) ExecContext(ctx context.Context, query string, args []driver.NamedValue) (dr driver.Result, err error) {
 	if o.debug != nil {
-		fmt.Fprintf(o.debug, "Conn.ExecContext $p\n", o)
+		fmt.Fprintf(o.debug, "Conn.ExecContext %p\n", o)
 	}
 	select {
 	case <-ctx.Done():
@@ -618,7 +618,7 @@ func (o *Rows) Close() error {
 	if o.con.debug != nil {
 		fmt.Fprintf(o.con.debug, "Rows.Close %p\n", o.Stmt)
 	}
-	return nil
+	return o.Stmt.Close()
 }
 
 // Driver name
