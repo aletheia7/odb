@@ -350,6 +350,8 @@ func new_con(host string, login Login, dsn string) (*Conn, error) {
 		r.driver = msaccess
 	case strings.HasPrefix(dsn, string(foxpro)):
 		r.driver = foxpro
+	case strings.HasPrefix(dsn, string(mssql)):
+		r.driver = mssql
 	default:
 		return nil, fmt.Errorf("unknown driver", dsn)
 	}
@@ -1225,7 +1227,7 @@ func (o *data) short() C.odbSHORT {
 }
 
 const (
-	obinary   data = C.ODB_BINARY   // (-2)
+	obinary   data = C.ODB_BINARY   // (-2) 65534
 	owchar         = C.ODB_WCHAR    // (-8) Use for unicode
 	osmallint      = C.ODB_SMALLINT // (-15)
 	oint           = C.ODB_INT      // (-16)
@@ -1356,6 +1358,19 @@ var odb2sql = map[driver_odbc]map[data]desc{
 		oreal:     desc{C.SQL_REAL, 24, 0},
 		odatetime: desc{C.SQL_DATETIME, 23, 3},
 	},
+	mssql: {
+		obinary:   desc{C.SQL_BINARY, 8000, 0},
+		owchar:    desc{C.SQL_NTEXT, 1073741823, 0}, // memo
+		osmallint: desc{C.SQL_SMALLINT, 5, 0},
+		oint:      desc{C.SQL_INT, 10, 0},
+		obigint:   desc{C.SQL_DOUBLE, 53, 0},
+		// Bigint:   desc{C.SQL_BIGINT, 19, 0}, // missing
+		obit:      desc{C.SQL_BIT, 1, 0},
+		ochar:     desc{C.SQL_VARCHAR, 8000, 0},
+		odouble:   desc{C.SQL_DOUBLE, 53, 0},
+		oreal:     desc{C.SQL_REAL, 24, 0},
+		odatetime: desc{C.SQL_DATETIME, 23, 3},
+	},
 	// Foxpro: { // https://msdn.microsoft.com/en-us/library/z3y7feks(v=vs.80).aspx TYPE()
 	// 	Char:     "C",
 	// 	Datetime: "T",
@@ -1371,4 +1386,5 @@ var odb2sql = map[driver_odbc]map[data]desc{
 const (
 	msaccess driver_odbc = `DRIVER=Microsoft Access Driver (*.mdb)`
 	foxpro               = `DRIVER={Microsoft Visual FoxPro Driver}`
+	mssql                = `DRIVER={SQL Server}`
 )
