@@ -152,7 +152,7 @@ func (o *Conn) BeginTx(ctx context.Context, opts driver.TxOptions) (tx driver.Tx
 		}
 		var isolation C.odbULONG
 		switch o.driver {
-		case msaccess:
+		case msaccess, mssql:
 			switch sql.IsolationLevel(opts.Isolation) {
 			case sql.LevelDefault:
 				isolation = C.ODB_TXN_DEFAULT
