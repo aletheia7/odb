@@ -1360,7 +1360,7 @@ var odb2sql = map[driver_odbc]map[data]desc{
 	},
 	mssql: {
 		obinary:   desc{C.SQL_BINARY, 8000, 0},
-		owchar:    desc{C.SQL_NTEXT, 1073741823, 0}, // memo
+		owchar:    desc{C.SQL_NVARCHAR, 4000, 0}, // memo
 		osmallint: desc{C.SQL_SMALLINT, 5, 0},
 		oint:      desc{C.SQL_INT, 10, 0},
 		obigint:   desc{C.SQL_DOUBLE, 53, 0},
