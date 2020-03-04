@@ -1371,14 +1371,27 @@ var odb2sql = map[driver_odbc]map[data]desc{
 		oreal:     desc{C.SQL_REAL, 24, 0},
 		odatetime: desc{C.SQL_DATETIME, 23, 3},
 	},
-	// Foxpro: { // https://msdn.microsoft.com/en-us/library/z3y7feks(v=vs.80).aspx TYPE()
-	// 	Char:     "C",
-	// 	Datetime: "T",
-	// 	Int:      "N",
-	// 	Double:   "N",
-	// 	Bit:      "L",
-	// 	Smallint: "N",
-	// 	Binary:   "W",
+	foxpro: {
+		obinary:   desc{C.SQL_BINARY, 8000, 0},
+		owchar:    desc{C.SQL_NVARCHAR, 4000, 0}, // memo
+		osmallint: desc{C.SQL_SMALLINT, 5, 0},
+		oint:      desc{C.SQL_INT, 10, 0},
+		obigint:   desc{C.SQL_DOUBLE, 53, 0},
+		// Bigint:   desc{C.SQL_BIGINT, 19, 0}, // missing
+		obit:      desc{C.SQL_BIT, 1, 0},
+		ochar:     desc{C.SQL_VARCHAR, 8000, 0},
+		odouble:   desc{C.SQL_DOUBLE, 53, 0},
+		oreal:     desc{C.SQL_REAL, 24, 0},
+		odatetime: desc{C.SQL_DATETIME, 23, 3},
+	},
+	// foxpro: { // https://msdn.microsoft.com/en-us/library/z3y7feks(v=vs.80).aspx TYPE()
+	// 	ochar:     "C",
+	// 	odatatime: "T",
+	// 	oint:      "N",
+	// 	odouble:   "N",
+	// 	obit:      "L",
+	// 	osmallint: "N",
+	// 	obinary:   "W",
 	// 	// Binary_msaccess_memo: "M",
 	// },
 }
