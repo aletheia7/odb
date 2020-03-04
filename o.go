@@ -691,6 +691,7 @@ const (
 	Mapchar2wchar   = C.ODB_ATTR_MAPCHARTOWCHAR
 	Describe_params = C.ODB_ATTR_DESCRIBEPARAMS
 	Unicodesql      = C.ODB_ATTR_UNICODESQL
+	Right_trim_text = C.ODB_ATTR_RIGHTTRIMTEXT
 )
 
 func Bool_opt(opt bool_option, enable bool) option {
