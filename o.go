@@ -947,7 +947,11 @@ func (o *Stmt) QueryContext(ctx context.Context, args []driver.NamedValue) (dr d
 			col++
 			switch t := na.Value.(type) {
 			case string, *string, []byte, *[]byte:
-				err = o.bind(col, owchar)
+				if o.con.driver == foxpro {
+					err = o.bind(col, ochar)
+				} else {
+					err = o.bind(col, owchar)
+				}
 			case int64, *int64:
 				err = o.bind(col, obigint)
 			case time.Time, *time.Time:
