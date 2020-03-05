@@ -19,6 +19,8 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"path"
+	"runtime"
 	"strconv"
 	"strings"
 	"sync/atomic"
@@ -62,9 +64,7 @@ type Conn struct {
 }
 
 func (o *Conn) Prepare(query string) (ds driver.Stmt, err error) {
-	if o.debug != nil {
-		fmt.Fprintln(o.debug, "Conn.Prepare:")
-	}
+	debug_w(o.debug)
 	return o.PrepareContext(context.Background(), query)
 }
 
@@ -83,9 +83,7 @@ func (o *Conn) PrepareContext(ctx context.Context, query string) (ds driver.Stmt
 			return
 		}
 		ds = st
-		if o.debug != nil {
-			fmt.Fprintf(o.debug, "Conn.PrepareContext:")
-		}
+		debug_w(o.debug)
 		return
 	}()
 	select {
@@ -97,9 +95,7 @@ func (o *Conn) PrepareContext(ctx context.Context, query string) (ds driver.Stmt
 }
 
 func (o *Conn) Ping(ctx context.Context) (err error) {
-	if o.debug != nil {
-		fmt.Fprintln(o.debug, "Conn.Ping:")
-	}
+	debug_wf(o.debug, "hi %v", "erik")
 	select {
 	case <-ctx.Done():
 		return ctx.Err()
@@ -122,9 +118,7 @@ func (o *Conn) Ping(ctx context.Context) (err error) {
 }
 
 func (o *Conn) Close() error {
-	if o.debug != nil {
-		fmt.Fprintln(o.debug, "Conn.Close:")
-	}
+	debug_w(o.debug)
 	o.logout(true)
 	return nil
 }
@@ -135,9 +129,7 @@ func (o *Conn) Begin() (driver.Tx, error) {
 
 // msaccess: sql.LevelReadCommitted or sql.LevelDefault (usually none)
 func (o *Conn) BeginTx(ctx context.Context, opts driver.TxOptions) (tx driver.Tx, err error) {
-	if o.debug != nil {
-		fmt.Fprintln(o.debug, "Conn.BeginTx:")
-	}
+	debug_w(o.debug)
 	select {
 	case <-ctx.Done():
 		return nil, ctx.Err()
@@ -191,9 +183,7 @@ func (o *Conn) BeginTx(ctx context.Context, opts driver.TxOptions) (tx driver.Tx
 }
 
 func (o *Conn) Commit() (err error) {
-	if o.debug != nil {
-		fmt.Fprintln(o.debug, "Conn.Commit:")
-	}
+	debug_w(o.debug)
 	if !dB2b(C.odbCommit(o.h)) {
 		return oe2err(o.h)
 	}
@@ -201,9 +191,7 @@ func (o *Conn) Commit() (err error) {
 }
 
 func (o *Conn) Rollback() (err error) {
-	if o.debug != nil {
-		fmt.Fprintln(o.debug, "Conn.Rollback:")
-	}
+	debug_w(o.debug)
 	if !dB2b(C.odbRollback(o.h)) {
 		return oe2err(o.h)
 	}
@@ -262,9 +250,7 @@ func (o *stresult) RowsAffected() (int64, error) {
 
 // msaccess: Must add an Identity_table arg to call LastInsertId()
 func (o *Conn) ExecContext(ctx context.Context, query string, args []driver.NamedValue) (dr driver.Result, err error) {
-	if o.debug != nil {
-		fmt.Fprintln(o.debug, "Conn.ExecContext:")
-	}
+	debug_w(o.debug)
 	select {
 	case <-ctx.Done():
 		return nil, ctx.Err()
@@ -298,19 +284,7 @@ func (o *Conn) ExecContext(ctx context.Context, query string, args []driver.Name
 }
 
 func (o *Conn) QueryContext(ctx context.Context, query string, args []driver.NamedValue) (dr driver.Rows, err error) {
-	if o.debug != nil {
-		// q := shrink.ReplaceAllLiteralString(strings.Map(func(r rune) rune {
-		// 	switch r {
-		// 	case '\t':
-		// 		return ' '
-		// 	case '\n':
-		// 		return -1
-		// 	default:
-		// 		return r
-		// 	}
-		// }, query), ` `)
-		fmt.Fprintln(o.debug, "Conn.QueryContext:")
-	}
+	debug_w(o.debug)
 	select {
 	case <-ctx.Done():
 		return nil, ctx.Err()
@@ -424,9 +398,7 @@ func (o *Conn) prepare(query string) (st *Stmt, err error) {
 	r.h = C.odbAllocate(o.h)
 	if r.h == nil {
 		err = oe2err(o.h)
-		if o.debug != nil {
-			fmt.Fprintln(o.debug, "Conn.prepare:", oe2err)
-		}
+		debug_w(o.debug)
 		return nil, err
 	}
 	if strings.HasPrefix(query, Execute_prefix) {
@@ -660,10 +632,8 @@ type Rows struct {
 }
 
 func (o *Rows) Close() error {
-	if o.con.debug != nil {
-		fmt.Fprintln(o.con.debug, "Rows.Close:")
-	}
-	return o.Stmt.Close()
+	debug_w(o.con.debug)
+	return nil
 }
 
 // Driver name
@@ -766,9 +736,7 @@ func (o *Driver) Open(dsn string) (driver.Conn, error) {
 			}
 		}
 	}
-	if con.debug != nil {
-		fmt.Fprintln(con.debug, "Driver.Open:")
-	}
+	debug_w(con.debug)
 	return con, nil
 }
 
@@ -815,9 +783,7 @@ func new_named_sql(tp_s string) (r *named_sql) {
 }
 
 func (o *Stmt) Close() error {
-	if o.con.debug != nil {
-		fmt.Fprintln(o.con.debug, "Stmt.Close:")
-	}
+	debug_w(o.con.debug)
 	if o.h != nil {
 		C.odbDropQry(o.h)
 		C.odbFree(o.h)
@@ -929,9 +895,7 @@ var (
 
 // msaccess: Must add an Identity_table arg to call LastInsertId()
 func (o *Stmt) ExecContext(ctx context.Context, args []driver.NamedValue) (dr driver.Result, err error) {
-	if o.con.debug != nil {
-		fmt.Fprintln(o.con.debug, "Stmt.ExecContext:")
-	}
+	debug_w(o.con.debug)
 	_, err = o.QueryContext(ctx, args)
 	if err == nil {
 		dr = o
@@ -940,9 +904,7 @@ func (o *Stmt) ExecContext(ctx context.Context, args []driver.NamedValue) (dr dr
 }
 
 func (o *Stmt) QueryContext(ctx context.Context, args []driver.NamedValue) (dr driver.Rows, err error) {
-	if o.con.debug != nil {
-		fmt.Fprintln(o.con.debug, "Stmt.QueryContext:")
-	}
+	debug_w(o.con.debug)
 	select {
 	case <-ctx.Done():
 		return nil, ctx.Err()
@@ -1426,3 +1388,49 @@ const (
 	foxpro               = `DRIVER={Microsoft Visual FoxPro Driver}`
 	mssql                = `DRIVER={SQL Server}`
 )
+
+func debug_w(w io.Writer) {
+	if w == nil {
+		return
+	}
+	debug_wf(w, ``)
+}
+
+func debug_wf(w io.Writer, format string, a ...interface{}) {
+	if w == nil {
+		return
+	}
+	skip := 3
+	if len(format) == 0 {
+		skip = 4
+	}
+	fn, file, line := file_line(skip)
+	fmt.Fprintf(w, `%v %v:%v `+format, append([]interface{}{file, path.Base(fn), line}, a...)...)
+}
+
+func file_line(skip int) (fn string, file string, line int) {
+	pc := make([]uintptr, 1)
+	n := runtime.Callers(skip, pc)
+	if n == 0 {
+		return ``, ``, 0
+	}
+	frames := runtime.CallersFrames(pc[:n])
+	frame, _ := frames.Next()
+	return frame.Function, path.Base(trim_go_path(frame.Function, frame.File)), frame.Line
+}
+
+func trim_go_path(name, file string) string {
+	// From github.com/pkg/errors, BSD-2-Clause
+	const sep = "/"
+	goal := strings.Count(name, sep) + 2
+	i := len(file)
+	for n := 0; n < goal; n++ {
+		i = strings.LastIndex(file[:i], sep)
+		if i == -1 {
+			i = -len(sep)
+			break
+		}
+	}
+	file = file[i+len(sep):]
+	return file
+}
