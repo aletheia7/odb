@@ -583,22 +583,32 @@ func (o *Stmt) set(col C.odbUSHORT, i interface{}) (err error) {
 				return oe2err(o.h)
 			}
 		} else {
-			if o.con.driver == msaccess {
+			switch o.con.driver {
+			case msaccess:
 				if !dB2b(C.odbSetParamDouble(o.h, col, C.odbDOUBLE(float64(*v)), 0)) {
 					return oe2err(o.h)
 				}
-			} else {
+			case foxpro:
+				if !dB2b(C.odbSetParamLong(o.h, col, C.odbULONG(*v), 0)) {
+					return oe2err(o.h)
+				}
+			default:
 				if !dB2b(C.odbSetParamLongLong(o.h, col, C.odbULONGLONG(*v), 0)) {
 					return oe2err(o.h)
 				}
 			}
 		}
 	case int64:
-		if o.con.driver == msaccess {
+		switch o.con.driver {
+		case msaccess:
 			if !dB2b(C.odbSetParamDouble(o.h, col, C.odbDOUBLE(float64(v)), 0)) {
 				return oe2err(o.h)
 			}
-		} else {
+		case foxpro:
+			if !dB2b(C.odbSetParamLong(o.h, col, C.odbULONG(v), 0)) {
+				return oe2err(o.h)
+			}
+		default:
 			if !dB2b(C.odbSetParamLongLong(o.h, col, C.odbULONGLONG(v), 0)) {
 				return oe2err(o.h)
 			}
@@ -852,9 +862,14 @@ func (o *Stmt) LastInsertId() (id int64, err error) {
 	return
 }
 
-// Not implemented
-func (o *Stmt) RowsAffected() (int64, error) {
-	return 0, driver.ErrSkip
+func (o *Stmt) RowsAffected() (i int64, err error) {
+	i = int64(C.odbGetRowCount(o.h))
+	if i == 0 {
+		if 0 < int(C.odbGetError(o.h)) {
+			err = oe2err(o.h)
+		}
+	}
+	return
 }
 
 func (o *Stmt) Exec(args []driver.Value) (dr driver.Result, err error) {
@@ -953,7 +968,12 @@ func (o *Stmt) QueryContext(ctx context.Context, args []driver.NamedValue) (dr d
 					err = o.bind(col, owchar)
 				}
 			case int64, *int64:
-				err = o.bind(col, obigint)
+				switch o.con.driver {
+				case foxpro:
+					err = o.bind(col, oint)
+				default:
+					err = o.bind(col, obigint)
+				}
 			case time.Time, *time.Time:
 				err = o.bind(col, odatetime)
 			case bool, *bool:
