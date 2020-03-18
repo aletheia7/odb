@@ -645,11 +645,11 @@ var driver_name_ct uint32
 // pattern is odbtp_msaccess_1, odbtp_msaccess_2, odbtp_msaccess_...
 func Register(address string, login Login, odbc_dsn string, opt ...option) (driver_name string) {
 	switch {
-	case strings.HasPrefix(odb_dsn, string(msaccess)):
+	case strings.HasPrefix(odbc_dsn, string(msaccess)):
 		driver_name = fmt.Sprintf("odbtp_msaccess_%v", Driver_msaccess, atomic.AddUint32(&driver_name_ct, 1))
-	case strings.HasPrefix(odb_dsn, string(foxpro)):
+	case strings.HasPrefix(odbc_dsn, string(foxpro)):
 		driver_name = fmt.Sprintf("odbtp_foxpro_%v", Driver_msaccess, atomic.AddUint32(&driver_name_ct, 1))
-	case strings.HasPrefix(odb_dsn, string(mssql)):
+	case strings.HasPrefix(odbc_dsn, string(mssql)):
 		driver_name = fmt.Sprintf("odbtp_mssql_%v", Driver_msaccess, atomic.AddUint32(&driver_name_ct, 1))
 	}
 	sql.Register(driver_name, &Driver{
