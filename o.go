@@ -636,9 +636,6 @@ func (o *Rows) Close() error {
 	return nil
 }
 
-// Driver name
-const Driver_msaccess = "odbtp_msaccess"
-
 var driver_name_ct uint32
 
 // Returns the registered driver name to use in sql.Open(). The driver name
@@ -646,11 +643,11 @@ var driver_name_ct uint32
 func Register(address string, login Login, odbc_dsn string, opt ...option) (driver_name string) {
 	switch {
 	case strings.HasPrefix(odbc_dsn, string(msaccess)):
-		driver_name = fmt.Sprintf("odbtp_msaccess_%v", Driver_msaccess, atomic.AddUint32(&driver_name_ct, 1))
+		driver_name = fmt.Sprintf("odbtp_msaccess_%v", atomic.AddUint32(&driver_name_ct, 1))
 	case strings.HasPrefix(odbc_dsn, string(foxpro)):
-		driver_name = fmt.Sprintf("odbtp_foxpro_%v", Driver_msaccess, atomic.AddUint32(&driver_name_ct, 1))
+		driver_name = fmt.Sprintf("odbtp_foxpro_%v", atomic.AddUint32(&driver_name_ct, 1))
 	case strings.HasPrefix(odbc_dsn, string(mssql)):
-		driver_name = fmt.Sprintf("odbtp_mssql_%v", Driver_msaccess, atomic.AddUint32(&driver_name_ct, 1))
+		driver_name = fmt.Sprintf("odbtp_mssql_%v", atomic.AddUint32(&driver_name_ct, 1))
 	}
 	sql.Register(driver_name, &Driver{
 		addr:     address,
