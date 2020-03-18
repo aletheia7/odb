@@ -644,7 +644,14 @@ var driver_name_ct uint32
 // Returns the registered driver name to use in sql.Open(). The driver name
 // pattern is odbtp_msaccess_1, odbtp_msaccess_2, odbtp_msaccess_...
 func Register(address string, login Login, odbc_dsn string, opt ...option) (driver_name string) {
-	driver_name = fmt.Sprintf("%v_%v", Driver_msaccess, atomic.AddUint32(&driver_name_ct, 1))
+	switch {
+	case strings.HasPrefix(odb_dsn, string(msaccess)):
+		driver_name = fmt.Sprintf("odbtp_msaccess_%v", Driver_msaccess, atomic.AddUint32(&driver_name_ct, 1))
+	case strings.HasPrefix(odb_dsn, string(foxpro)):
+		driver_name = fmt.Sprintf("odbtp_foxpro_%v", Driver_msaccess, atomic.AddUint32(&driver_name_ct, 1))
+	case strings.HasPrefix(odb_dsn, string(mssql)):
+		driver_name = fmt.Sprintf("odbtp_mssql_%v", Driver_msaccess, atomic.AddUint32(&driver_name_ct, 1))
+	}
 	sql.Register(driver_name, &Driver{
 		addr:     address,
 		login:    login,
@@ -1099,7 +1106,7 @@ func (o *Stmt) Next(dest []driver.Value) (err error) {
 					dest[i] = true
 				}
 			}
-		case osmallint:
+		case osmallint, outinyint:
 			dest[i] = int64(C.odbColDataShort(o.h, col))
 		default:
 			return fmt.Errorf("invalid type: column: %v, %v", i+1, dt)
@@ -1196,6 +1203,7 @@ var data2s = map[data]string{
 	odouble:   "Double",
 	oreal:     "Real",
 	odatetime: "Datetime",
+	outinyint: "Utinyint",
 	// Guid:      "Guid",
 	// Usmallint: "Usmallint",
 	// Uint:      "Uint",
@@ -1229,6 +1237,7 @@ const (
 	// Uint           = C.ODB_UINT      // (-18)
 	// Tinyint        = C.ODB_TINYINT   // (-26)
 	// Ubigint        = C.ODB_UBIGINT   // (-27)
+	outinyint = C.ODB_UTINYINT
 	// Utinyint       = C.ODB_UTINYINT  // (-28)
 	// Numeric        = C.ODB_NUMERIC   // 2
 	// Date           = C.ODB_DATE      // 91
@@ -1357,6 +1366,7 @@ var odb2sql = map[driver_odbc]map[data]desc{
 		odouble:   desc{C.SQL_DOUBLE, 53, 0},
 		oreal:     desc{C.SQL_REAL, 24, 0},
 		odatetime: desc{C.SQL_DATETIME, 23, 3},
+		outinyint: desc{C.SQL_INT, 10, 0},
 	},
 	foxpro: {
 		obinary:   desc{C.SQL_BINARY, 8000, 0},
