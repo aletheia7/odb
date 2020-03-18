@@ -95,7 +95,30 @@ func (o *Conn) PrepareContext(ctx context.Context, query string) (ds driver.Stmt
 }
 
 func (o *Conn) Ping(ctx context.Context) (err error) {
-	debug_wf(o.debug, "hi %v", "erik")
+	debug_w(o.debug)
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	default:
+	}
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		if dB2b(C.odbIsConnected(o.h)) {
+			return
+		}
+		err = driver.ErrBadConn
+	}()
+	select {
+	case <-ctx.Done():
+		return driver.ErrBadConn
+	case <-done:
+	}
+	return
+}
+
+func (o *Conn) ResetSession(ctx context.Context) (err error) {
+	debug_w(o.debug)
 	select {
 	case <-ctx.Done():
 		return ctx.Err()
