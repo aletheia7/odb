@@ -32,6 +32,8 @@ import (
 
 type driver_odbc string
 
+var con_ct, qry_ct int32
+
 const (
 	Default_port = 2799
 
@@ -57,10 +59,12 @@ const (
 type Conn struct {
 	driver              driver_odbc
 	h                   C.odbHANDLE
+	con_ct              int32
 	prepare_is_template bool
 	zero_scan           bool
 	debug               io.Writer
 	identity_table      string
+	prepare_ctx         bool // Called from PrepareContext, else QueryContext
 }
 
 func (o *Conn) Prepare(query string) (ds driver.Stmt, err error) {
@@ -76,6 +80,8 @@ func (o *Conn) PrepareContext(ctx context.Context, query string) (ds driver.Stmt
 	}
 	done := make(chan struct{})
 	go func() {
+		debug_w(o.debug)
+		o.prepare_ctx = true
 		defer close(done)
 		var st *Stmt
 		st, err = o.prepare(query)
@@ -273,7 +279,7 @@ func (o *stresult) RowsAffected() (int64, error) {
 
 // msaccess: Must add an Identity_table arg to call LastInsertId()
 func (o *Conn) ExecContext(ctx context.Context, query string, args []driver.NamedValue) (dr driver.Result, err error) {
-	debug_w(o.debug)
+	debug_wf(o.debug, query)
 	select {
 	case <-ctx.Done():
 		return nil, ctx.Err()
@@ -365,6 +371,7 @@ func new_con(host string, login Login, dsn string) (*Conn, error) {
 		C.odbFree(r.h)
 		return nil, err
 	}
+	r.con_ct = atomic.AddInt32(&con_ct, 1)
 	return r, err
 }
 
@@ -417,6 +424,7 @@ func (o *Conn) prepare(query string) (st *Stmt, err error) {
 		con:      o,
 		bindp:    map[C.odbUSHORT]data{},
 		prepared: true,
+		qry_ct:   atomic.AddInt32(&qry_ct, 1),
 	}
 	r.h = C.odbAllocate(o.h)
 	if r.h == nil {
@@ -424,6 +432,7 @@ func (o *Conn) prepare(query string) (st *Stmt, err error) {
 		debug_w(o.debug)
 		return nil, err
 	}
+	debug_wf(o.debug, "con: %v, qry: %v", o.con_ct, r.qry_ct)
 	if strings.HasPrefix(query, Execute_prefix) {
 		r.prepared = false
 		r.ns = new_named_sql(query[len(Execute_prefix):])
@@ -462,6 +471,7 @@ type Stmt struct {
 	ns             *named_sql
 	prepared       bool
 	identity_table string // only msaccess
+	qry_ct         int32
 }
 
 func (o *Stmt) execute() error {
@@ -656,6 +666,9 @@ type Rows struct {
 
 func (o *Rows) Close() error {
 	debug_w(o.con.debug)
+	if !o.con.prepare_ctx {
+		return o.Stmt.Close()
+	}
 	return nil
 }
 
@@ -810,7 +823,7 @@ func new_named_sql(tp_s string) (r *named_sql) {
 }
 
 func (o *Stmt) Close() error {
-	debug_w(o.con.debug)
+	debug_wf(o.con.debug, "con: %v, qry: %v", o.con.con_ct, o.qry_ct)
 	if o.h != nil {
 		C.odbDropQry(o.h)
 		C.odbFree(o.h)
