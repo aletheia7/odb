@@ -15,7 +15,6 @@ import (
 	"context"
 	"database/sql"
 	"database/sql/driver"
-	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -1211,8 +1210,24 @@ func dB2b(b C.odbBOOL) bool {
 	return true
 }
 
+type Err struct {
+	I    int
+	Text string
+}
+
+func (o Err) Error() string {
+	return o.Text
+}
+
+func (o Err) Unwrap() error {
+	return fmt.Errorf("%w", o)
+}
+
 func oe2err(h C.odbHANDLE) error {
-	return errors.New(C.GoString((*C.char)(unsafe.Pointer(C.odbGetErrorText(h)))))
+	return Err{
+		I:    C.odbGetError(h),
+		Text: C.GoString((*C.char)(unsafe.Pointer(C.odbGetErrorText(h)))),
+	}
 }
 
 type data int16
