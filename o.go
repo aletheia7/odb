@@ -1225,7 +1225,7 @@ func (o Err) Unwrap() error {
 
 func oe2err(h C.odbHANDLE) error {
 	return Err{
-		I:    C.odbGetError(h),
+		I:    int(C.odbGetError(h)),
 		Text: C.GoString((*C.char)(unsafe.Pointer(C.odbGetErrorText(h)))),
 	}
 }
