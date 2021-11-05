@@ -1,11 +1,7 @@
-[![](https://img.shields.io/badge/godoc-reference-blue.svg)](https://godoc.org/github.com/aletheia7/odb) 
+[![Go Reference](https://pkg.go.dev/badge/github.com/aletheia7/odb.svg)](https://pkg.go.dev/github.com/aletheia7/odb)
 
-#### Install 
-```bash
-go get github.com/aletheia7/odb
-cd <odb location>
-go generate 
-```
+Compiled for amd64.
+
 #### License 
 
 Use of this source code is governed by a BSD-2-Clause license that can be found
