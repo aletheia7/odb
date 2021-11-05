@@ -22,7 +22,8 @@
 #define _ODBTP_H_
 
 /* The below line must be uncommented for 64-bit systems, such as Tru64. */
-/* #define _C_LONG_64_ 1 */
+// Erik
+#define _C_LONG_64_ 1
 
 #define ODBTP_LIB_VERSION "1.1.4"
 
