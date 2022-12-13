@@ -1,6 +1,9 @@
 package odb_test
 
 import (
+	"database/sql"
+	"fmt"
+
 	"github.com/aletheia7/odb"
 )
 
@@ -19,7 +22,7 @@ func ExampleRegister() {
 	)
 	db, err := sql.Open(driver_name, ``)
 	if err != nil {
-		j.Err(err)
+		fmt.Print(err)
 		return
 	}
 	defer db.Close()

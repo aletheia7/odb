@@ -45,6 +45,8 @@ const (
 	Sql_get_type_info = Execute_prefix + "||SQLGetTypeInfo"
 	Sql_tables        = Execute_prefix + "||SQLTables|||"
 	Sql_columns       = Execute_prefix + "||SQLColumns|||" // must append "<table>", and optional "|column"
+	reset_sql         = Execute_prefix + `select 1`
+	reset_sql_foxpro  = Execute_prefix + `set path to`
 )
 
 type Login C.odbUSHORT
@@ -72,10 +74,8 @@ func (o *Conn) Prepare(query string) (ds driver.Stmt, err error) {
 }
 
 func (o *Conn) PrepareContext(ctx context.Context, query string) (ds driver.Stmt, err error) {
-	select {
-	case <-ctx.Done():
-		return nil, ctx.Err()
-	default:
+	if err = ctx.Err(); err != nil {
+		return
 	}
 	done := make(chan struct{})
 	go func() {
@@ -89,11 +89,10 @@ func (o *Conn) PrepareContext(ctx context.Context, query string) (ds driver.Stmt
 		}
 		ds = st
 		debug_w(o.debug)
-		return
 	}()
 	select {
 	case <-ctx.Done():
-		return nil, ctx.Err()
+		err = ctx.Err()
 	case <-done:
 	}
 	return
@@ -101,47 +100,38 @@ func (o *Conn) PrepareContext(ctx context.Context, query string) (ds driver.Stmt
 
 func (o *Conn) Ping(ctx context.Context) (err error) {
 	debug_w(o.debug)
-	select {
-	case <-ctx.Done():
-		return ctx.Err()
-	default:
-	}
-	done := make(chan struct{})
-	go func() {
-		defer close(done)
-		if dB2b(C.odbIsConnected(o.h)) {
-			return
-		}
-		err = driver.ErrBadConn
-	}()
-	select {
-	case <-ctx.Done():
-		return driver.ErrBadConn
-	case <-done:
-	}
-	return
+	return o.ResetSession(ctx)
 }
 
 func (o *Conn) ResetSession(ctx context.Context) (err error) {
 	debug_w(o.debug)
-	select {
-	case <-ctx.Done():
-		return ctx.Err()
-	default:
+	if err = ctx.Err(); err != nil {
+		return
 	}
 	done := make(chan struct{})
 	go func() {
 		defer close(done)
-		if dB2b(C.odbIsConnected(o.h)) {
+		var st *Stmt
+		switch o.driver {
+		case foxpro:
+			st, err = o.prepare(reset_sql_foxpro)
+		default:
+			st, err = o.prepare(reset_sql)
+		}
+		debug_wf(o.debug, "resetsession: o.prepare err: %v\n", err)
+		if err != nil {
 			return
 		}
-		err = driver.ErrBadConn
+		defer st.Close()
+		err = st.execute()
+		debug_wf(o.debug, "resetsession: execute: %v\n", err)
 	}()
 	select {
 	case <-ctx.Done():
-		return driver.ErrBadConn
+		err = ctx.Err()
 	case <-done:
 	}
+	debug_wf(o.debug, "resetsession: returned err: %v\n", err)
 	return
 }
 
@@ -158,10 +148,8 @@ func (o *Conn) Begin() (driver.Tx, error) {
 // msaccess: sql.LevelReadCommitted or sql.LevelDefault (usually none)
 func (o *Conn) BeginTx(ctx context.Context, opts driver.TxOptions) (tx driver.Tx, err error) {
 	debug_w(o.debug)
-	select {
-	case <-ctx.Done():
-		return nil, ctx.Err()
-	default:
+	if err = ctx.Err(); err != nil {
+		return
 	}
 	done := make(chan struct{})
 	go func() {
@@ -204,7 +192,7 @@ func (o *Conn) BeginTx(ctx context.Context, opts driver.TxOptions) (tx driver.Tx
 	select {
 	case <-ctx.Done():
 		o.logout(true)
-		return nil, ctx.Err()
+		err = ctx.Err()
 	case <-done:
 	}
 	return
@@ -279,10 +267,8 @@ func (o *stresult) RowsAffected() (int64, error) {
 // msaccess: Must add an Identity_table arg to call LastInsertId()
 func (o *Conn) ExecContext(ctx context.Context, query string, args []driver.NamedValue) (dr driver.Result, err error) {
 	debug_wf(o.debug, query)
-	select {
-	case <-ctx.Done():
-		return nil, ctx.Err()
-	default:
+	if err = ctx.Err(); err != nil {
+		return
 	}
 	done := make(chan struct{})
 	go func() {
@@ -305,7 +291,7 @@ func (o *Conn) ExecContext(ctx context.Context, query string, args []driver.Name
 	}()
 	select {
 	case <-ctx.Done():
-		return nil, ctx.Err()
+		err = ctx.Err()
 	case <-done:
 	}
 	return
@@ -313,10 +299,8 @@ func (o *Conn) ExecContext(ctx context.Context, query string, args []driver.Name
 
 func (o *Conn) QueryContext(ctx context.Context, query string, args []driver.NamedValue) (dr driver.Rows, err error) {
 	debug_w(o.debug)
-	select {
-	case <-ctx.Done():
-		return nil, ctx.Err()
-	default:
+	if err = ctx.Err(); err != nil {
+		return
 	}
 	done := make(chan struct{})
 	go func() {
@@ -331,22 +315,23 @@ func (o *Conn) QueryContext(ctx context.Context, query string, args []driver.Nam
 	}()
 	select {
 	case <-ctx.Done():
-		return nil, ctx.Err()
+		err = ctx.Err()
 	case <-done:
 	}
 	return
 }
 
 // host example: pine | pine:2799
-func new_con(host string, login Login, dsn string) (*Conn, error) {
+func new_con(host string, login Login, dsn string) (r *Conn, err error) {
 	if !strings.Contains(host, ":") {
 		host += ":" + strconv.Itoa(Default_port)
 	}
-	tcp, err := net.ResolveTCPAddr("tcp", host)
+	var tcp *net.TCPAddr
+	tcp, err = net.ResolveTCPAddr("tcp", host)
 	if err != nil {
 		return nil, err
 	}
-	r := &Conn{}
+	r = &Conn{}
 	switch {
 	case strings.HasPrefix(dsn, string(msaccess)):
 		r.driver = msaccess
@@ -355,11 +340,10 @@ func new_con(host string, login Login, dsn string) (*Conn, error) {
 	case strings.HasPrefix(dsn, string(mssql)):
 		r.driver = mssql
 	default:
-		return nil, fmt.Errorf("unknown driver", dsn)
+		return nil, fmt.Errorf("unknown driver: %v", dsn)
 	}
-	r.h = C.odbAllocate(nil)
-	if r.h == nil {
-		return nil, oe2err(r.h)
+	if r.h = C.odbAllocate(nil); r.h == nil {
+		return nil, driver.ErrBadConn
 	}
 	h := new_s(tcp.IP.String())
 	defer h.free()
@@ -368,7 +352,7 @@ func new_con(host string, login Login, dsn string) (*Conn, error) {
 	if !dB2b(C.odbLogin(r.h, h.p, C.odbUSHORT(tcp.Port), C.odbUSHORT(login), p.p)) {
 		err = oe2err(r.h)
 		C.odbFree(r.h)
-		return nil, err
+		return nil, driver.ErrBadConn
 	}
 	r.con_ct = atomic.AddInt32(&con_ct, 1)
 	return r, err
@@ -431,7 +415,8 @@ func (o *Conn) prepare(query string) (st *Stmt, err error) {
 		debug_w(o.debug)
 		return nil, err
 	}
-	debug_wf(o.debug, "con: %v, qry: %v", o.con_ct, r.qry_ct)
+	debug_wf(o.debug, "con: %v, qry: %v\n", o.con_ct, r.qry_ct)
+	debug_wf(o.debug, "o.prepare: con: %v, qry: %v query: %v\n", o.con_ct, r.qry_ct, query)
 	if strings.HasPrefix(query, Execute_prefix) {
 		r.prepared = false
 		r.ns = new_named_sql(query[len(Execute_prefix):])
@@ -455,11 +440,12 @@ func (o *Conn) prepare(query string) (st *Stmt, err error) {
 	s := new_s(query)
 	defer s.free()
 	if !dB2b(C.odbPrepare(r.h, s.p)) {
-		err := oe2err(r.h)
+		err = oe2err(r.h)
 		r.Close()
-		return nil, err
+		return
 	}
-	return r, nil
+	st = r
+	return
 }
 
 type Stmt struct {
@@ -473,20 +459,22 @@ type Stmt struct {
 	qry_ct         int32
 }
 
-func (o *Stmt) execute() error {
+func (o *Stmt) execute() (err error) {
 	o.fetch_err = nil
 	r := false
 	if o.prepared {
+		debug_wf(o.con.debug, "execute prepared: %v\n", o.prepared)
 		r = dB2b(C.odbExecute(o.h, C.odbPCSTR(nil)))
 	} else {
+		debug_wf(o.con.debug, "execute not-prepared: %v\n", o.ns.sql)
 		s := new_s(o.ns.sql)
 		defer s.free()
 		r = dB2b(C.odbExecute(o.h, s.p))
 	}
 	if !r {
-		return oe2err(o.h)
+		err = oe2err(o.h)
 	}
-	return nil
+	return
 }
 
 // col: 1 based
@@ -638,7 +626,7 @@ func (o *Stmt) set(col C.odbUSHORT, i interface{}) (err error) {
 			}
 		} else {
 			var b C.odbBYTE
-			if *v == true {
+			if *v {
 				b = C.odbBYTE(1)
 			}
 			if !dB2b(C.odbSetParamByte(o.h, col, b, 0)) {
@@ -647,7 +635,7 @@ func (o *Stmt) set(col C.odbUSHORT, i interface{}) (err error) {
 		}
 	case bool:
 		var b C.odbBYTE
-		if v == true {
+		if v {
 			b = C.odbBYTE(1)
 		}
 		if !dB2b(C.odbSetParamByte(o.h, col, b, 0)) {
@@ -944,10 +932,8 @@ func (o *Stmt) ExecContext(ctx context.Context, args []driver.NamedValue) (dr dr
 
 func (o *Stmt) QueryContext(ctx context.Context, args []driver.NamedValue) (dr driver.Rows, err error) {
 	debug_w(o.con.debug)
-	select {
-	case <-ctx.Done():
-		return nil, ctx.Err()
-	default:
+	if err = ctx.Err(); err != nil {
+		return
 	}
 	done := make(chan struct{})
 	go func() {
@@ -1007,11 +993,10 @@ func (o *Stmt) QueryContext(ctx context.Context, args []driver.NamedValue) (dr d
 			return
 		}
 		dr = &Rows{o}
-		return
 	}()
 	select {
 	case <-ctx.Done():
-		return nil, ctx.Err()
+		err = ctx.Err()
 	case <-done:
 	}
 	return
@@ -1204,10 +1189,7 @@ func b2B(b bool) C.odbBOOL {
 }
 
 func dB2b(b C.odbBOOL) bool {
-	if b == 0 {
-		return false
-	}
-	return true
+	return b != 0
 }
 
 type Err struct {
@@ -1216,11 +1198,17 @@ type Err struct {
 }
 
 func (o Err) Error() string {
-	return o.Text
+	return fmt.Sprintf("%v: %v", o.I, o.Text)
 }
 
 func (o Err) Unwrap() error {
-	return fmt.Errorf("%w", o)
+	switch {
+	case o.I == 4:
+		// Used in ResetSession
+		return driver.ErrBadConn
+	default:
+		return nil
+	}
 }
 
 func oe2err(h C.odbHANDLE) error {
@@ -1443,8 +1431,8 @@ var odb2sql = map[driver_odbc]map[data]desc{
 
 const (
 	msaccess driver_odbc = `DRIVER=Microsoft Access Driver (*.mdb)`
-	foxpro               = `DRIVER={Microsoft Visual FoxPro Driver}`
-	mssql                = `DRIVER={SQL Server}`
+	foxpro   driver_odbc = `DRIVER={Microsoft Visual FoxPro Driver}`
+	mssql    driver_odbc = `DRIVER={SQL Server}`
 )
 
 func debug_w(w io.Writer) {
@@ -1463,6 +1451,9 @@ func debug_wf(w io.Writer, format string, a ...interface{}) {
 		skip = 4
 	}
 	fn, file, line := file_line(skip)
+	if !strings.HasSuffix(format, "\n") {
+		format += "\n"
+	}
 	fmt.Fprintf(w, `%v %v:%v `+format, append([]interface{}{file, path.Base(fn), line}, a...)...)
 }
 
